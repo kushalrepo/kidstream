@@ -18,3 +18,4 @@ videos/*
 Thumbs.db
 *.log
 .env
+.ssl-cert.json

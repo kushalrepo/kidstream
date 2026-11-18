@@ -4,25 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KidStream - Fun Kids Player</title>
-  <link rel="stylesheet" href="/css/kid.css">
+  <link rel="stylesheet" href="/css/kid.css?v=2.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🎈</text></svg>">
 </head>
 <body>
 
   <!-- Main Player Container -->
   <div class="player-container">
-    <video id="kid-video" playsinline preload="auto"></video>
+    <video id="kid-video" playsinline webkit-playsinline preload="auto"></video>
 
     <!-- Top Right Status Indicators -->
     <div class="status-pill">
       <span class="status-dot" id="status-dot"></span>
       <span id="status-text">Connecting...</span>
-      <span class="cam-indicator" id="cam-indicator">📷 Cam Active</span>
+      <span class="cam-indicator" id="cam-indicator" style="cursor: pointer;" title="Tap to toggle camera">📷 Cam Active</span>
     </div>
 
     <!-- Hidden Video & Canvas for Kid Camera Capture & Streaming -->
-    <video id="kid-cam-video" autoplay playsinline muted></video>
-    <canvas id="kid-cam-canvas" width="320" height="240"></canvas>
+    <video id="kid-cam-video" autoplay playsinline webkit-playsinline muted style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;"></video>
+    <canvas id="kid-cam-canvas" width="320" height="240" style="display: none;"></canvas>
   </div>
 
   <!-- Welcome / Unlock Overlay (Required for Camera & Audio permissions) -->
@@ -81,10 +81,10 @@
     </div>
   </div>
 
-  <!-- Scripts -->
+  <!-- Scripts with cache busters -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js"></script>
-  <script src="/js/confetti.js"></script>
-  <script src="/js/kid.js"></script>
+  <script src="/js/sounds.js?v=2.2"></script>
+  <script src="/js/confetti.js?v=2.2"></script>
+  <script src="/js/kid.js?v=2.2"></script>
 </body>
 </html>

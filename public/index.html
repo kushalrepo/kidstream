@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KidStream - Smart Kid Video & Parental Remote Control</title>
-  <link rel="stylesheet" href="/css/parent.css">
+  <link rel="stylesheet" href="/css/parent.css?v=2.2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🎈</text></svg>">
   <style>
     .portal-hero {
@@ -333,28 +333,31 @@
   <!-- Desktop Two-Column Launch Cards -->
   <div class="portal-cards">
     <!-- Kid Screen Card -->
-    <a href="/kid" class="portal-card" target="_blank">
+    <div class="portal-card">
       <div class="portal-card-icon">📺</div>
       <h3 class="portal-card-title">Kid's Video Player</h3>
       <p class="portal-card-desc">
         Child-friendly fullscreen player. Kid cannot tamper with playback. Transmits live webcam to parents, displays math challenges, and speaks voice prompts.
       </p>
-      <button class="btn-portal btn-portal-kid">
+      <a href="/kid" class="btn-portal btn-portal-kid" target="_blank">
         <span>🎈</span> Open Kid Player Screen
-      </button>
-    </a>
+      </a>
+      <a href="https://localhost:3443/kid" id="btn-ipad-https" class="btn-portal" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; text-decoration: none;" target="_blank">
+        <span>🍎</span> iPad / iPhone Cam Mode (HTTPS)
+      </a>
+    </div>
 
     <!-- Parent Control Card -->
-    <a href="/parent" class="portal-card" target="_blank">
+    <div class="portal-card">
       <div class="portal-card-icon">🎛️</div>
       <h3 class="portal-card-title">Parent Dashboard (Desktop)</h3>
       <p class="portal-card-desc">
         Open the control center on this computer: live kid cam feed, play/pause/speed controls, math challenge station, TTS intercom, and video uploader.
       </p>
-      <button class="btn-portal btn-portal-parent">
+      <a href="/parent" class="btn-portal btn-portal-parent" target="_blank">
         <span>🛡️</span> Open Parent Dashboard
-      </button>
-    </a>
+      </a>
+    </div>
   </div>
 
   <!-- Script for Dynamic QR Loading & Copying -->
@@ -373,6 +376,11 @@
       .then(data => {
         currentParentUrl = data.parentUrl || `http://localhost:${data.port}/parent`;
         parentDirectUrl.innerText = currentParentUrl;
+
+        const btnIpadHttps = document.getElementById('btn-ipad-https');
+        if (btnIpadHttps && data.httpsKidUrl) {
+          btnIpadHttps.href = data.httpsKidUrl;
+        }
 
         if (data.parentQr) {
           qrImg.src = data.parentQr;

@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
@@ -7,9 +8,11 @@ const os = require('os');
 const multer = require('multer');
 const cors = require('cors');
 const QRCode = require('qrcode');
+const selfsigned = require('selfsigned');
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -19,6 +22,7 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const HTTPS_PORT = process.env.HTTPS_PORT || 3443;
 const VIDEOS_DIR = path.join(__dirname, 'videos');
 
 // Ensure videos directory exists
@@ -45,6 +49,18 @@ rootFiles.forEach(file => {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Prevent aggressive caching on iOS / iPad Safari so updates always load immediately
+app.use((req, res, next) => {
+  if (req.url.match(/\.(html|js|css)$/) || req.url === '/' || req.url === '/kid' || req.url === '/parent') {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configure Multer for video uploads
@@ -183,14 +199,20 @@ app.get('/api/network-info', async (req, res) => {
     console.error('QR code generation error:', e);
   }
 
+  const httpsParentUrl = `https://${primaryIp}:${HTTPS_PORT}/parent`;
+  const httpsKidUrl = `https://${primaryIp}:${HTTPS_PORT}/kid`;
+
   res.json({
     port: PORT,
+    httpsPort: HTTPS_PORT,
     ips: ips,
     primaryIp: primaryIp,
     hostname: rawHostname,
     bonjourHost: bonjourHost,
     parentUrl: parentUrl,
     kidUrl: kidUrl,
+    httpsParentUrl: httpsParentUrl,
+    httpsKidUrl: httpsKidUrl,
     parentQr: parentQr,
     localUrl: `http://localhost:${PORT}`,
     parentPath: '/parent',
@@ -527,20 +549,61 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start Server
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`====================================================`);
-  console.log(`🚀 KidStream Server is RUNNING on port ${PORT}`);
-  console.log(`📺 Kid Player URL:   http://localhost:${PORT}/kid`);
-  console.log(`🎛️ Parent Dash URL:  http://localhost:${PORT}/parent`);
-  
-  const networkIps = getNetworkIps();
-  if (networkIps.length > 0) {
-    console.log(`\n📱 Local Network Access (Phones, Tablets, Laptops):`);
-    networkIps.forEach(net => {
-      console.log(`   - Kid:    http://${net.address}:${PORT}/kid`);
-      console.log(`   - Parent: http://${net.address}:${PORT}/parent`);
-    });
+// Start HTTP & HTTPS Servers
+async function startServers() {
+  // Generate or load self-signed SSL certificate (enables camera on iOS / iPad Safari)
+  const certFile = path.join(__dirname, '.ssl-cert.json');
+  let pems = null;
+  if (fs.existsSync(certFile)) {
+    try {
+      pems = JSON.parse(fs.readFileSync(certFile, 'utf8'));
+    } catch (e) {}
   }
-  console.log(`====================================================`);
+  if (!pems || !pems.private || !pems.cert) {
+    console.log('Generating local SSL certificate for iPad HTTPS...');
+    pems = await selfsigned.generate([{ name: 'commonName', value: 'KidStream' }], { keySize: 2048, days: 365 });
+    fs.writeFileSync(certFile, JSON.stringify(pems));
+  }
+
+  const httpsServer = https.createServer({
+    key: pems.private,
+    cert: pems.cert
+  }, app);
+
+  io.attach(httpsServer);
+
+  // Start HTTP Server
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`====================================================`);
+    console.log(`🚀 KidStream Server is RUNNING on HTTP port ${PORT}`);
+    console.log(`📺 Kid Player URL:   http://localhost:${PORT}/kid`);
+    console.log(`🎛️ Parent Dash URL:  http://localhost:${PORT}/parent`);
+    
+    const networkIps = getNetworkIps();
+    if (networkIps.length > 0) {
+      console.log(`\n📱 Local Network Access (HTTP):`);
+      networkIps.forEach(net => {
+        console.log(`   - Kid:    http://${net.address}:${PORT}/kid`);
+        console.log(`   - Parent: http://${net.address}:${PORT}/parent`);
+      });
+    }
+    console.log(`====================================================`);
+  });
+
+  // Start HTTPS Server
+  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+    console.log(`🔒 KidStream HTTPS Server RUNNING on port ${HTTPS_PORT} (iOS / iPad Camera Enabled)`);
+    const networkIps = getNetworkIps();
+    if (networkIps.length > 0) {
+      console.log(`📱 iPad HTTPS Access (Enables Camera Permissions):`);
+      networkIps.forEach(net => {
+        console.log(`   - iPad Kid (Cam): https://${net.address}:${HTTPS_PORT}/kid`);
+      });
+    }
+    console.log(`====================================================`);
+  });
+}
+
+startServers().catch(err => {
+  console.error('Failed to start servers:', err);
 });

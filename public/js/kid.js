@@ -88,35 +88,94 @@
   // =================== Camera Access & Streaming ===================
 
   async function startKidCamera() {
-    try {
-      const constraints = {
-        video: {
-          width: { ideal: 320 },
-          height: { ideal: 240 },
-          frameRate: { ideal: 15 }
-        },
-        audio: false
-      };
+    camIndicator.innerText = '📷 Starting...';
+    camIndicator.style.color = '#ffd166';
 
-      camStream = await navigator.mediaDevices.getUserMedia(constraints);
+    // Check for Secure Context on iOS Safari (iOS blocks camera on insecure HTTP)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const httpsUrl = `https://${window.location.hostname}:3443${window.location.pathname}`;
+        camIndicator.innerText = '📷 Tap for Cam (HTTPS)';
+        camIndicator.style.color = '#f59e0b';
+        camIndicator.onclick = () => {
+          if (confirm(`On iPad/iPhone, Apple requires HTTPS for camera access.\n\nTap OK to switch to HTTPS mode:\n${httpsUrl}`)) {
+            window.location.href = httpsUrl;
+          }
+        };
+        return;
+      }
+    }
+
+    try {
+      let stream = null;
+      const constraintCandidates = [
+        // Candidate 1: front-facing user camera (optimal for iPad)
+        { video: { facingMode: 'user' }, audio: false },
+        // Candidate 2: relaxed width/height
+        { video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 360 } }, audio: false },
+        // Candidate 3: simple generic video constraint
+        { video: true, audio: false }
+      ];
+
+      for (const candidate of constraintCandidates) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(candidate);
+          if (stream) break;
+        } catch (candidateErr) {
+          console.warn('Constraint attempt failed:', candidate, candidateErr);
+        }
+      }
+
+      if (!stream) {
+        throw new Error('Unable to acquire camera stream with any constraint');
+      }
+
+      camStream = stream;
       camVideo.srcObject = camStream;
+      camVideo.setAttribute('playsinline', 'true');
+      camVideo.setAttribute('webkit-playsinline', 'true');
+      camVideo.muted = true;
+
+      try {
+        await camVideo.play();
+      } catch (playErr) {
+        console.log('camVideo play deferred:', playErr);
+      }
+
       camIndicator.innerText = '📷 Cam Live';
       camIndicator.style.color = '#00e676';
+      camIndicator.onclick = () => {
+        // Tap to re-verify or refresh camera
+        startKidCamera();
+      };
 
-      // Start streaming frames to parents via Socket (5 frames per sec - fast, smooth, universal)
+      // Watchdog if video track is ended (e.g. app switched on iPad)
+      const track = camStream.getVideoTracks()[0];
+      if (track) {
+        track.onended = () => {
+          camIndicator.innerText = '📷 Tap to restart cam';
+          camIndicator.style.color = '#ff8a80';
+        };
+      }
+
+      // Stream frames to parents via Socket (4 frames per sec, 0.55 quality - rock solid on mobile)
       if (camInterval) clearInterval(camInterval);
       camInterval = setInterval(() => {
-        if (camVideo.readyState >= 2) {
+        if (camVideo.readyState >= 2 && camVideo.videoWidth > 0) {
           camCtx.drawImage(camVideo, 0, 0, camCanvas.width, camCanvas.height);
-          const frameData = camCanvas.toDataURL('image/jpeg', 0.6);
+          const frameData = camCanvas.toDataURL('image/jpeg', 0.55);
           socket.emit('kid:camera_frame', frameData);
         }
-      }, 200);
+      }, 250);
 
     } catch (err) {
       console.warn('Camera access denied or unavailable:', err);
-      camIndicator.innerText = '📷 Cam Off';
+      camIndicator.innerText = '📷 Cam Blocked (Tap)';
       camIndicator.style.color = '#ff8a80';
+      camIndicator.onclick = () => {
+        alert('Camera was blocked or denied.\n\nOn iPad:\n1. Check Safari Settings -> Camera -> Allow\n2. If using HTTP, switch to HTTPS at port 3443');
+        startKidCamera();
+      };
     }
   }
 
