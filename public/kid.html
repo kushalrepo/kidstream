@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KidStream - Fun Kids Player</title>
+  <link rel="stylesheet" href="/css/kid.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🎈</text></svg>">
+</head>
+<body>
+
+  <!-- Main Player Container -->
+  <div class="player-container">
+    <video id="kid-video" playsinline preload="auto"></video>
+
+    <!-- Top Right Status Indicators -->
+    <div class="status-pill">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Connecting...</span>
+      <span class="cam-indicator" id="cam-indicator">📷 Cam Active</span>
+    </div>
+
+    <!-- Hidden Video & Canvas for Kid Camera Capture & Streaming -->
+    <video id="kid-cam-video" autoplay playsinline muted></video>
+    <canvas id="kid-cam-canvas" width="320" height="240"></canvas>
+  </div>
+
+  <!-- Welcome / Unlock Overlay (Required for Camera & Audio permissions) -->
+  <div id="welcome-overlay" class="welcome-overlay">
+    <div class="welcome-card">
+      <div class="welcome-mascot">🚀</div>
+      <h1 class="welcome-title">Welcome to KidStream!</h1>
+      <p class="welcome-subtitle">Tap below to enter your fun video zone!</p>
+      <button id="btn-start" class="btn-start-watching">
+        <span>🎈</span> Start Watching! <span>⭐</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Math Interruption Challenge Modal -->
+  <div id="math-overlay" class="math-modal-backdrop hidden">
+    <div class="math-card">
+      <div class="math-top-badge" id="math-badge">🌟 Quick Brain Challenge! 🌟</div>
+      
+      <div class="math-mascot-container">
+        <div class="math-mascot" id="math-mascot">🦖</div>
+      </div>
+
+      <h2 class="math-title" id="math-question">What is 3 + 2?</h2>
+      <p class="math-subtitle" id="math-prompt">Count the fun items to solve!</p>
+
+      <!-- Visual Counting Box (Apples, Stars, Balloons, etc.) -->
+      <div class="math-visual-box" id="math-visual-box">
+        <!-- Rendered dynamically via JS -->
+      </div>
+
+      <!-- Multiple Choice Options -->
+      <div class="math-options-grid" id="math-options-grid">
+        <!-- Buttons rendered dynamically -->
+      </div>
+
+      <div class="math-result-message" id="math-result-msg"></div>
+    </div>
+  </div>
+
+  <!-- Text-To-Speech Parent Prompt Banner -->
+  <div id="tts-toast" class="tts-toast-container hidden">
+    <div class="tts-card">
+      <div class="tts-avatar" id="tts-avatar">🤖</div>
+      <div class="tts-content">
+        <div class="tts-header">
+          <span>📢 Message from Mom & Dad</span>
+          <div class="tts-waves">
+            <div class="tts-wave-bar"></div>
+            <div class="tts-wave-bar"></div>
+            <div class="tts-wave-bar"></div>
+          </div>
+        </div>
+        <div class="tts-text" id="tts-text">Finish your food! 🥦</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/confetti.js"></script>
+  <script src="/js/kid.js"></script>
+</body>
+</html>

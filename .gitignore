@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Video media files (GitHub has a 100MB file limit)
+*.mp4
+*.webm
+*.mkv
+*.mov
+*.ogg
+videos/*
+!videos/.gitkeep
+
+# OS & Logs
+.DS_Store
+Thumbs.db
+*.log
+.env

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KidStream - Parent Control Center</title>
+  <link rel="stylesheet" href="/css/parent.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="brand-icon">🛡️</span>
+      <h1 class="brand-title">KidStream</h1>
+      <span class="brand-badge">Parent Command Center</span>
+    </div>
+
+    <div class="nav-actions">
+      <div class="kid-status-badge">
+        <span class="kid-status-dot" id="kid-status-dot"></span>
+        <span id="kid-status-text">Kid Waiting...</span>
+      </div>
+
+      <a href="/kid" target="_blank" class="btn-open-kid">
+        <span>📺</span> Open Kid Player
+      </a>
+    </div>
+  </header>
+
+  <!-- Network / Phone Connectivity Banner -->
+  <div class="network-banner">
+    <div class="network-banner-left">
+      <span>📱 <strong>Control from Phone/Tablet:</strong> Connect to same Wi-Fi and open</span>
+      <span class="ip-tag" id="parent-ip-url">http://localhost:3000/parent</span>
+    </div>
+    <div class="network-banner-right">
+      <span>Kid URL: </span>
+      <span class="ip-tag" id="kid-ip-url">http://localhost:3000/kid</span>
+    </div>
+  </div>
+
+  <!-- Main Dashboard Container -->
+  <main class="dashboard-container">
+
+    <!-- Top Row: Kid Camera & Master Playback Controls -->
+    <div class="grid-2col">
+
+      <!-- Section 1: Live Kid Camera Monitor -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📷</span> Live Kid Cam Monitor
+          </div>
+          <span class="card-subtitle" id="cam-status-label">Monitoring child</span>
+        </div>
+
+        <div class="cam-monitor-wrapper" id="cam-wrapper">
+          <div class="cam-overlay-badge" id="cam-live-badge">
+            <span style="font-size: 8px;">●</span> LIVE
+          </div>
+          
+          <img id="kid-cam-img" alt="Live Kid Camera Feed" style="display: none;">
+
+          <div class="cam-offline-placeholder" id="cam-offline-placeholder">
+            <span class="cam-offline-icon">👶</span>
+            <p>Waiting for Kid to connect camera...</p>
+            <span style="font-size: 12px; color: #64748b;">(Open Kid Player and tap "Start Watching")</span>
+          </div>
+
+          <div class="cam-overlay-controls">
+            <button class="btn-cam-action" id="btn-cam-snap" title="Save snapshot">📸 Snapshot</button>
+            <button class="btn-cam-action" id="btn-cam-fullscreen" title="Expand view">⛶ Fullscreen</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Master Playback Remote Controls -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🎛️</span> Playback Remote Control
+          </div>
+          <span class="card-subtitle">Direct synchronized control</span>
+        </div>
+
+        <div class="now-playing-box">
+          <div class="now-playing-label">Currently Playing</div>
+          <div class="now-playing-title" id="now-playing-title">No video selected</div>
+        </div>
+
+        <!-- Timeline Scrub Bar -->
+        <div class="scrub-container">
+          <input type="range" id="timeline-slider" class="scrub-slider" min="0" max="100" value="0" step="0.5">
+          <div class="time-display">
+            <span id="time-current">00:00</span>
+            <span id="time-duration">00:00</span>
+          </div>
+        </div>
+
+        <!-- Primary Playback Buttons -->
+        <div class="playback-buttons">
+          <button class="btn-ctrl" id="btn-rewind" title="Rewind 10s">⏪</button>
+          <button class="btn-ctrl btn-ctrl-main" id="btn-play-pause" title="Play / Pause">▶</button>
+          <button class="btn-ctrl btn-ctrl-stop" id="btn-stop" title="Stop & Reset">⏹</button>
+          <button class="btn-ctrl" id="btn-forward" title="Forward 10s">⏩</button>
+        </div>
+
+        <!-- Playback Speed Control -->
+        <div class="speed-control-section">
+          <div class="section-label">
+            <span>⚡ Playback Speed</span>
+            <span class="speed-badge" id="speed-badge">1.0x (Normal)</span>
+          </div>
+
+          <div class="speed-presets">
+            <button class="btn-speed" data-rate="0.25">0.25x</button>
+            <button class="btn-speed" data-rate="0.5">0.5x</button>
+            <button class="btn-speed" data-rate="0.75">0.75x</button>
+            <button class="btn-speed active" data-rate="1.0">1.0x</button>
+            <button class="btn-speed" data-rate="1.25">1.25x</button>
+            <button class="btn-speed" data-rate="1.5">1.5x</button>
+            <button class="btn-speed" data-rate="2.0">2.0x</button>
+          </div>
+
+          <input type="range" id="speed-slider" class="scrub-slider" min="0.25" max="2.5" step="0.05" value="1.0">
+        </div>
+
+        <!-- Volume Control -->
+        <div class="volume-control">
+          <span id="vol-icon">🔊</span>
+          <input type="range" id="volume-slider" class="scrub-slider" min="0" max="1" step="0.05" value="1.0">
+          <span id="vol-percent" style="font-size: 13px; color: var(--text-muted); width: 45px;">100%</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Middle Row: Math Interruption & TTS Intercom -->
+    <div class="grid-2col">
+
+      <!-- Section 3: Math Interruption Station -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🧠</span> Math Interruption Station
+          </div>
+          <span class="card-subtitle">Pause video with playful math challenges</span>
+        </div>
+
+        <!-- Interruption Active Status Banner -->
+        <div class="interruption-status-box" id="int-status-box">
+          <div class="int-status-info">
+            <span class="int-status-badge" id="int-status-badge">STATUS: IDLE</span>
+            <span class="int-status-text" id="int-status-text">Video is playing uninterrupted</span>
+          </div>
+          <button class="btn-dismiss-int hidden" id="btn-dismiss-int">Resume Video</button>
+        </div>
+
+        <!-- Quick Problem Presets -->
+        <div class="section-label">Quick Math Presets</div>
+        <div class="preset-grid">
+          <button class="btn-math-preset active" data-type="add-easy">➕ Add (1-5)</button>
+          <button class="btn-math-preset" data-type="add-med">➕ Add (1-10)</button>
+          <button class="btn-math-preset" data-type="sub-easy">➖ Sub (1-5)</button>
+          <button class="btn-math-preset" data-type="sub-med">➖ Sub (1-10)</button>
+          <button class="btn-math-preset" data-type="mul-easy">✖️ Mult (x2, x3)</button>
+          <button class="btn-math-preset" data-type="random">🎲 Random Mix</button>
+        </div>
+
+        <!-- Visual Theme Selector -->
+        <div class="input-row" style="margin-bottom: 14px;">
+          <select id="math-theme" class="input-ctrl">
+            <option value="fruits">🍎 Theme: Sweet Fruits (Apples, Bananas)</option>
+            <option value="stars">⭐ Theme: Shiny Stars & Moons</option>
+            <option value="animals">🐱 Theme: Cute Animals (Puppies, Kittens)</option>
+            <option value="candy">🍬 Theme: Candies & Cupcakes</option>
+          </select>
+        </div>
+
+        <!-- Custom Math Question Option -->
+        <div class="custom-math-form">
+          <div class="section-label">Or Custom Problem / Question</div>
+          <input type="text" id="custom-question" class="input-ctrl" placeholder="e.g. What is 4 + 4? or How many legs has a dog?">
+          <div class="input-row">
+            <input type="text" id="custom-answer" class="input-ctrl" placeholder="Correct Answer (e.g. 8)">
+            <input type="text" id="custom-wrongs" class="input-ctrl" placeholder="Wrong options comma-separated (e.g. 6, 7, 9)">
+          </div>
+        </div>
+
+        <!-- Trigger Button -->
+        <button class="btn-trigger-math" id="btn-trigger-math">
+          <span>🚀</span> Interrupt Kid with Math Challenge Now!
+        </button>
+
+        <!-- Auto-Interrupt Timer -->
+        <div class="auto-timer-box">
+          <span style="font-size: 13px; font-weight: 600;">⏰ Auto-Interrupt Timer:</span>
+          <select id="auto-timer-select" class="input-ctrl" style="width: auto;">
+            <option value="0">Off (Manual only)</option>
+            <option value="2">Every 2 Minutes</option>
+            <option value="5">Every 5 Minutes</option>
+            <option value="10">Every 10 Minutes</option>
+            <option value="15">Every 15 Minutes</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Section 4: Text-To-Speech (TTS) Voice Intercom -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📢</span> Parent Voice Prompts (Text-to-Speech)
+          </div>
+          <span class="card-subtitle">Speak directly through kid's speaker</span>
+        </div>
+
+        <div class="section-label">Quick 1-Click Parenting Prompts</div>
+        <div class="tts-quick-prompts">
+          <button class="btn-tts-quick" data-text="Finish your food, buddy!" data-avatar="🥦">
+            <span>🥦</span> "Finish your food!"
+          </button>
+          <button class="btn-tts-quick" data-text="Take another bite of your meal, please!" data-avatar="🥪">
+            <span>🥪</span> "Take another bite!"
+          </button>
+          <button class="btn-tts-quick" data-text="Drink some water or milk!" data-avatar="🥛">
+            <span>🥛</span> "Drink your water/milk!"
+          </button>
+          <button class="btn-tts-quick" data-text="Sit back a little, you are too close to the screen!" data-avatar="📏">
+            <span>📏</span> "Sit back from screen!"
+          </button>
+          <button class="btn-tts-quick" data-text="Sit up straight, buddy!" data-avatar="🪑">
+            <span>🪑</span> "Sit up straight!"
+          </button>
+          <button class="btn-tts-quick" data-text="Five more minutes, then it is bedtime!" data-avatar="⏰">
+            <span>⏰</span> "5 more minutes / bedtime!"
+          </button>
+          <button class="btn-tts-quick" data-text="You are doing great!" data-avatar="⭐">
+            <span>⭐</span> "You are doing great!"
+          </button>
+          <button class="btn-tts-quick" data-text="Time to pause and wash your hands!" data-avatar="🧼">
+            <span>🧼</span> "Wash hands!"
+          </button>
+        </div>
+
+        <div class="section-label">Custom Message to Speak</div>
+        <div class="tts-custom-box">
+          <input type="text" id="custom-tts-text" class="input-ctrl" placeholder="Type what you want to say to your child...">
+          <button class="btn-speak" id="btn-send-tts">
+            <span>📢</span> Speak
+          </button>
+        </div>
+
+        <div class="input-row">
+          <select id="tts-avatar-select" class="input-ctrl" style="flex: 1;">
+            <option value="🤖">🤖 Mascot: Robot Friend</option>
+            <option value="🦖">🦖 Mascot: Friendly Dino</option>
+            <option value="🐰">🐰 Mascot: Bouncy Bunny</option>
+            <option value="👩">👩 Mom</option>
+            <option value="👨">👨 Dad</option>
+          </select>
+
+          <select id="tts-pitch-select" class="input-ctrl" style="flex: 1;">
+            <option value="1.15">Voice: Cheerful / Child-Friendly</option>
+            <option value="1.0">Voice: Natural Tone</option>
+            <option value="1.4">Voice: Cartoon High-Pitch</option>
+            <option value="0.8">Voice: Deep / Calm</option>
+          </select>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Bottom Row: Video Library & Uploader -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🎬</span> Video Library & Upload Manager
+        </div>
+        <span class="card-subtitle">Manage videos and upload new content</span>
+      </div>
+
+      <div class="video-manager-grid">
+        
+        <!-- Video List -->
+        <div>
+          <div class="section-label">Available Videos (<span id="video-count">0</span>)</div>
+          <div class="video-list" id="video-list">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Video Upload Dropzone -->
+        <div>
+          <div class="section-label">Upload New Video</div>
+          <div class="upload-dropzone" id="upload-dropzone">
+            <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/mkv,video/mov" style="display: none;">
+            <span class="upload-icon">📁</span>
+            <div class="upload-title">Drop video here or click to browse</div>
+            <div class="upload-hint">Supports MP4, WebM, MKV, MOV (up to 2GB)</div>
+          </div>
+
+          <div class="upload-progress-container hidden" id="upload-progress-container">
+            <div class="progress-bar">
+              <div class="progress-fill" id="upload-progress-fill"></div>
+            </div>
+            <div class="progress-label" id="upload-progress-label">Uploading: 0%</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/parent.js"></script>
+</body>
+</html>

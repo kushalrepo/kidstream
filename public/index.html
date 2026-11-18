@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KidStream - Smart Kid Video & Parental Remote Control</title>
+  <link rel="stylesheet" href="/css/parent.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20100%20100><text y=%22.9em%22 font-size=%2290%22>🎈</text></svg>">
+  <style>
+    .portal-hero {
+      text-align: center;
+      max-width: 800px;
+      margin: 40px auto 28px;
+      padding: 0 20px;
+    }
+    .portal-logo {
+      font-size: 56px;
+      margin-bottom: 12px;
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .portal-title {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #a5b4fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .portal-sub {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ========================================================
+       QR CODE CONNECT CARD (HIGH PROMINENCE FOR MOBILE PARENT)
+       ======================================================== */
+    .qr-connect-container {
+      max-width: 900px;
+      margin: 0 auto 36px;
+      padding: 0 20px;
+    }
+    .qr-card {
+      background: linear-gradient(145deg, #1e293b 0%, #172033 100%);
+      border: 2px solid #4338ca;
+      border-radius: 28px;
+      padding: 32px 36px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 36px;
+      align-items: center;
+      box-shadow: 0 20px 40px -10px rgba(67, 56, 202, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .qr-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding: 24px 20px;
+        gap: 24px;
+      }
+    }
+    .qr-frame-box {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    #parent-qr-img {
+      width: 220px;
+      height: 220px;
+      object-fit: contain;
+      border-radius: 8px;
+      display: block;
+    }
+    .qr-scan-badge {
+      margin-top: 10px;
+      background: #4338ca;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .qr-info-content {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .qr-header-badge {
+      background: rgba(99, 102, 241, 0.18);
+      color: #a5b4fc;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      align-self: flex-start;
+    }
+    @media (max-width: 768px) {
+      .qr-header-badge { align-self: center; }
+    }
+    .qr-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.25;
+    }
+    .qr-desc {
+      font-size: 14px;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .qr-url-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .qr-url-text {
+      font-family: monospace;
+      font-size: 14px;
+      color: #818cf8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 600;
+    }
+    .btn-copy-url {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-copy-url:hover {
+      background: #475569;
+    }
+    .qr-steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+    .qr-step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ip-selector-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 6px;
+    }
+
+    /* Desktop Cards */
+    .portal-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 900px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+    }
+    @media (max-width: 768px) {
+      .portal-cards { grid-template-columns: 1fr; }
+    }
+    .portal-card {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 24px;
+      padding: 28px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.25s;
+      box-shadow: var(--shadow-card);
+    }
+    .portal-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--primary);
+      box-shadow: 0 20px 35px -10px rgba(99, 102, 241, 0.3);
+    }
+    .portal-card-icon {
+      font-size: 48px;
+    }
+    .portal-card-title {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .portal-card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      flex: 1;
+    }
+    .btn-portal {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-portal-kid {
+      background: linear-gradient(135deg, #ff416c, #ff4b2b);
+      color: #fff;
+    }
+    .btn-portal-parent {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="brand-icon">🎈</span>
+      <h1 class="brand-title">KidStream</h1>
+      <span class="brand-badge">Parental Remote & Video Suite</span>
+    </div>
+  </header>
+
+  <!-- Hero Header -->
+  <div class="portal-hero">
+    <div class="portal-logo">🎈</div>
+    <h2 class="portal-title">KidStream Control Suite</h2>
+    <p class="portal-sub">
+      Let your child enjoy their video on their device, while you control playback, speed, math challenges, live camera feed, and speech prompts from your phone or laptop.
+    </p>
+  </div>
+
+  <!-- QR Code Hero Card for Mobile Parent -->
+  <div class="qr-connect-container">
+    <div class="qr-card">
+      
+      <!-- QR Image Frame -->
+      <div class="qr-frame-box">
+        <img id="parent-qr-img" src="" alt="Scan QR Code to Connect Mobile Parent">
+        <div class="qr-scan-badge">
+          <span>📷</span> Scan with Phone
+        </div>
+      </div>
+
+      <!-- QR Details & Steps -->
+      <div class="qr-info-content">
+        <div class="qr-header-badge">
+          <span>📱</span> Mobile Remote Access
+        </div>
+
+        <h3 class="qr-title">Connect Mobile Parent Dashboard</h3>
+        
+        <p class="qr-desc">
+          Scan this QR code with your phone or tablet's camera to instantly open the <strong>Parent Command Center</strong> on mobile! Control video playback, see your kid watching live, and send voice prompts right from your pocket.
+        </p>
+
+        <!-- Direct Link & Copy Button -->
+        <div class="qr-url-box">
+          <span class="qr-url-text" id="parent-direct-url">Loading URL...</span>
+          <button class="btn-copy-url" id="btn-copy-url">📋 Copy Link</button>
+        </div>
+
+        <!-- How to connect steps -->
+        <div class="qr-steps-list">
+          <div class="qr-step-item">
+            <span>1️⃣</span> <span>Make sure your phone is connected to the same Wi-Fi.</span>
+          </div>
+          <div class="qr-step-item">
+            <span>2️⃣</span> <span>Open your Phone Camera app and point it at the QR code.</span>
+          </div>
+          <div class="qr-step-item">
+            <span>3️⃣</span> <span>Tap the link that pops up to open the remote control!</span>
+          </div>
+        </div>
+
+        <!-- Optional Network Adapter / IP selector if multiple IPs -->
+        <div class="ip-selector-box" id="ip-selector-container" style="display: none;">
+          <span>Wi-Fi Network IP:</span>
+          <select id="ip-select" class="input-ctrl" style="padding: 4px 8px; font-size: 12px; width: auto;"></select>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Desktop Two-Column Launch Cards -->
+  <div class="portal-cards">
+    <!-- Kid Screen Card -->
+    <a href="/kid" class="portal-card" target="_blank">
+      <div class="portal-card-icon">📺</div>
+      <h3 class="portal-card-title">Kid's Video Player</h3>
+      <p class="portal-card-desc">
+        Child-friendly fullscreen player. Kid cannot tamper with playback. Transmits live webcam to parents, displays math challenges, and speaks voice prompts.
+      </p>
+      <button class="btn-portal btn-portal-kid">
+        <span>🎈</span> Open Kid Player Screen
+      </button>
+    </a>
+
+    <!-- Parent Control Card -->
+    <a href="/parent" class="portal-card" target="_blank">
+      <div class="portal-card-icon">🎛️</div>
+      <h3 class="portal-card-title">Parent Dashboard (Desktop)</h3>
+      <p class="portal-card-desc">
+        Open the control center on this computer: live kid cam feed, play/pause/speed controls, math challenge station, TTS intercom, and video uploader.
+      </p>
+      <button class="btn-portal btn-portal-parent">
+        <span>🛡️</span> Open Parent Dashboard
+      </button>
+    </a>
+  </div>
+
+  <!-- Script for Dynamic QR Loading & Copying -->
+  <script>
+    const qrImg = document.getElementById('parent-qr-img');
+    const parentDirectUrl = document.getElementById('parent-direct-url');
+    const btnCopyUrl = document.getElementById('btn-copy-url');
+    const ipSelectorContainer = document.getElementById('ip-selector-container');
+    const ipSelect = document.getElementById('ip-select');
+
+    let currentParentUrl = '';
+
+    // Fetch network info and QR code
+    fetch('/api/network-info')
+      .then(res => res.json())
+      .then(data => {
+        currentParentUrl = data.parentUrl || `http://localhost:${data.port}/parent`;
+        parentDirectUrl.innerText = currentParentUrl;
+
+        if (data.parentQr) {
+          qrImg.src = data.parentQr;
+        }
+
+        // If multiple IPs are available, populate dropdown
+        if (data.ips && data.ips.length > 1) {
+          ipSelectorContainer.style.display = 'flex';
+          ipSelect.innerHTML = '';
+          data.ips.forEach(net => {
+            const opt = document.createElement('option');
+            opt.value = net.address;
+            opt.innerText = `${net.address} (${net.name})`;
+            if (net.address === data.primaryIp) opt.selected = true;
+            ipSelect.appendChild(opt);
+          });
+
+          ipSelect.addEventListener('change', () => {
+            const selectedIp = ipSelect.value;
+            fetch(`/api/qr/parent?ip=${selectedIp}`)
+              .then(r => r.json())
+              .then(d => {
+                currentParentUrl = d.url;
+                parentDirectUrl.innerText = currentParentUrl;
+                qrImg.src = d.parentQr;
+              });
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load network info:', err);
+        parentDirectUrl.innerText = `${window.location.origin}/parent`;
+      });
+
+    // Copy link handler
+    btnCopyUrl.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(currentParentUrl).then(() => {
+        btnCopyUrl.innerText = '✅ Copied!';
+        setTimeout(() => {
+          btnCopyUrl.innerText = '📋 Copy Link';
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
