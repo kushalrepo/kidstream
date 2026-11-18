@@ -72,3 +72,30 @@ Simply open `http://localhost:3000/` on your computer. A prominent **QR Code** i
 1. Point your phone camera at the QR code.
 2. Tap the link popup.
 3. Your mobile phone immediately connects as the Parent Remote Control!
+
+---
+
+## 🍎 Running on an Old Mac Mini (24/7 Home Server)
+
+An old Mac Mini makes the perfect dedicated KidStream server: it uses very little power, runs quietly, and can be tucked away headless without a monitor or keyboard.
+
+### Quick Setup on Mac Mini:
+
+1. Open **Terminal** on your Mac Mini.
+2. Clone your repository:
+   ```bash
+   git clone https://github.com/kushalrepo/kidstream.git
+   cd kidstream
+   ```
+3. Run the automated Mac setup script:
+   ```bash
+   chmod +x setup-mac.sh
+   ./setup-mac.sh
+   ```
+   - **Option 1**: Run in foreground (test).
+   - **Option 2**: Install as an automatic background service (runs 24/7 and restarts when the Mac boots).
+
+### 💡 Tips for a Headless Mac Mini:
+- **Zero-Config Bonjour Address**: On any iPhone, iPad, or Mac in your house, you can simply type `http://<your-mac-name>.local:3000` (e.g. `http://mac-mini.local:3000/parent`) without checking IP addresses!
+- **Prevent Sleep**: In macOS *System Settings / Preferences -> Energy Saver*, check **"Prevent computer from sleeping automatically when the display is off"** and **"Start up automatically after a power failure"**.
+- **Adding Videos**: You can upload videos directly via the Parent Dashboard webpage, or copy them into the `kidstream/videos` folder via a USB drive or macOS File Sharing (SMB).

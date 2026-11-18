@@ -89,7 +89,8 @@ function getNetworkIps() {
   for (const name of Object.keys(interfaces)) {
     for (const net of interfaces[name]) {
       // IPv4 and non-internal (i.e. not 127.0.0.1)
-      if (net.family === 'IPv4' && !net.internal) {
+      // Supports both Node 18+ (string 'IPv4') and older Node 12-16 (number 4 or string)
+      if ((net.family === 'IPv4' || net.family === 4) && !net.internal) {
         ips.push({ name, address: net.address });
       }
     }
@@ -156,6 +157,14 @@ if (initialVideos.length > 0) {
 // API: Network info and QR code
 app.get('/api/network-info', async (req, res) => {
   const ips = getNetworkIps();
+  const rawHostname = os.hostname().replace(/\.local$/i, '');
+  const bonjourHost = `${rawHostname}.local`;
+  
+  // If running on macOS or Linux, add mDNS/Bonjour hostname option
+  if (process.platform === 'darwin' || process.platform === 'linux') {
+    ips.push({ name: 'Bonjour (Apple / mDNS)', address: bonjourHost });
+  }
+
   const primaryIp = ips.length > 0 ? ips[0].address : 'localhost';
   const parentUrl = `http://${primaryIp}:${PORT}/parent`;
   const kidUrl = `http://${primaryIp}:${PORT}/kid`;
@@ -178,6 +187,8 @@ app.get('/api/network-info', async (req, res) => {
     port: PORT,
     ips: ips,
     primaryIp: primaryIp,
+    hostname: rawHostname,
+    bonjourHost: bonjourHost,
     parentUrl: parentUrl,
     kidUrl: kidUrl,
     parentQr: parentQr,
