@@ -413,6 +413,10 @@ io.on('connection', (socket) => {
     io.to('parents').emit('playback:sync', state.playback);
   });
 
+  socket.on('parent:toggle_kid_fullscreen', () => {
+    io.to('kids').emit('control:toggle_fullscreen');
+  });
+
   socket.on('parent:select_video', (data) => {
     state.currentVideo = data.filename;
     state.playback.currentTime = 0;

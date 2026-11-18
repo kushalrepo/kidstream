@@ -90,6 +90,45 @@
           <div class="now-playing-title" id="now-playing-title">No video selected</div>
         </div>
 
+        <!-- Synchronized Parent Video Screen with Fullscreen Mode -->
+        <div class="parent-video-wrapper" id="parent-video-wrapper">
+          <video id="parent-video" playsinline muted preload="auto"></video>
+          
+          <div class="parent-video-badge">
+            <span>▶</span> SYNCED VIDEO
+          </div>
+
+          <!-- Quick Overlay Actions -->
+          <div class="parent-video-controls-overlay">
+            <button class="btn-parent-action btn-parent-fs-action" id="btn-parent-fullscreen" title="Play Video in Fullscreen for Parents">
+              <span>⛶</span> Fullscreen
+            </button>
+            <button class="btn-parent-action" id="btn-parent-pip" title="Picture in Picture">
+              <span>🪟</span> PiP
+            </button>
+            <button class="btn-parent-action" id="btn-parent-sound-toggle" title="Toggle Parent Audio">
+              <span id="parent-sound-icon">🔇</span> <span id="parent-sound-text">Muted</span>
+            </button>
+          </div>
+
+          <!-- Fullscreen Floating Bar (Active in Fullscreen mode) -->
+          <div class="parent-fs-floating-bar" id="parent-fs-bar">
+            <button class="btn-fs-ctrl" id="btn-fs-play-pause" title="Play / Pause">▶</button>
+            <input type="range" class="fs-scrub-slider" id="fs-scrub-slider" min="0" max="100" value="0" step="0.5">
+            <span class="fs-time-text" id="fs-time-text">00:00 / 00:00</span>
+            <select class="fs-speed-select" id="fs-speed-select" title="Speed">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="0.75">0.75x</option>
+              <option value="1.0" selected>1.0x</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2.0">2.0x</option>
+            </select>
+            <button class="btn-fs-ctrl btn-fs-exit" id="btn-fs-exit" title="Exit Fullscreen">✕ Exit</button>
+          </div>
+        </div>
+
         <!-- Timeline Scrub Bar -->
         <div class="scrub-container">
           <input type="range" id="timeline-slider" class="scrub-slider" min="0" max="100" value="0" step="0.5">
@@ -105,6 +144,8 @@
           <button class="btn-ctrl btn-ctrl-main" id="btn-play-pause" title="Play / Pause">▶</button>
           <button class="btn-ctrl btn-ctrl-stop" id="btn-stop" title="Stop & Reset">⏹</button>
           <button class="btn-ctrl" id="btn-forward" title="Forward 10s">⏩</button>
+          <button class="btn-ctrl btn-ctrl-fs" id="btn-playback-fullscreen" title="Play Video in Fullscreen (Parent)">⛶</button>
+          <button class="btn-ctrl" id="btn-remote-kid-fs" title="Make Kid Screen Fullscreen">📺</button>
         </div>
 
         <!-- Playback Speed Control -->

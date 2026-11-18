@@ -18,6 +18,21 @@
 
   // Playback elements
   const nowPlayingTitle = document.getElementById('now-playing-title');
+  const parentVideoWrapper = document.getElementById('parent-video-wrapper');
+  const parentVideo = document.getElementById('parent-video');
+  const btnParentFullscreen = document.getElementById('btn-parent-fullscreen');
+  const btnPlaybackFullscreen = document.getElementById('btn-playback-fullscreen');
+  const btnRemoteKidFs = document.getElementById('btn-remote-kid-fs');
+  const btnParentPip = document.getElementById('btn-parent-pip');
+  const btnParentSoundToggle = document.getElementById('btn-parent-sound-toggle');
+  const parentSoundIcon = document.getElementById('parent-sound-icon');
+  const parentSoundText = document.getElementById('parent-sound-text');
+  const btnFsPlayPause = document.getElementById('btn-fs-play-pause');
+  const fsScrubSlider = document.getElementById('fs-scrub-slider');
+  const fsTimeText = document.getElementById('fs-time-text');
+  const fsSpeedSelect = document.getElementById('fs-speed-select');
+  const btnFsExit = document.getElementById('btn-fs-exit');
+
   const timelineSlider = document.getElementById('timeline-slider');
   const timeCurrent = document.getElementById('time-current');
   const timeDuration = document.getElementById('time-duration');
@@ -189,6 +204,7 @@
     playbackRate = pb.playbackRate || 1.0;
 
     btnPlayPause.innerText = isPlaying ? '⏸' : '▶';
+    btnFsPlayPause.innerText = isPlaying ? '⏸' : '▶';
 
     if (!isDraggingScrub && duration > 0) {
       currentTime = pb.currentTime || 0;
@@ -196,11 +212,168 @@
       timelineSlider.value = currentTime;
       timeCurrent.innerText = formatTime(currentTime);
       timeDuration.innerText = formatTime(duration);
+
+      // Also sync fullscreen floating bar
+      fsScrubSlider.max = duration;
+      fsScrubSlider.value = currentTime;
+      fsTimeText.innerText = `${formatTime(currentTime)} / ${formatTime(duration)}`;
     }
+
+    // Sync parent video element
+    syncParentVideo(currentVideo, pb.currentTime, isPlaying, playbackRate);
 
     // Update speed UI
     updateSpeedBadge(playbackRate);
+    if (fsSpeedSelect) fsSpeedSelect.value = String(playbackRate);
   }
+
+  function syncParentVideo(filename, targetTime, isPlayingTarget, rate) {
+    if (!parentVideo) return;
+    if (filename) {
+      const streamUrl = `/api/stream/${encodeURIComponent(filename)}`;
+      if (parentVideo.src !== window.location.origin + streamUrl) {
+        parentVideo.src = streamUrl;
+        parentVideo.load();
+      }
+    }
+
+    if (rate && parentVideo.playbackRate !== rate) {
+      parentVideo.playbackRate = rate;
+    }
+
+    if (targetTime !== undefined && Math.abs(parentVideo.currentTime - targetTime) > 1.5) {
+      parentVideo.currentTime = targetTime;
+    }
+
+    if (isPlayingTarget) {
+      if (parentVideo.paused) {
+        parentVideo.play().catch(e => {
+          // Autoplay policy: if unmuted playback blocked, mute and retry
+          if (!parentVideo.muted) {
+            parentVideo.muted = true;
+            parentVideo.play().catch(err => console.log('Parent autoplay deferred:', err));
+          }
+        });
+      }
+    } else {
+      if (!parentVideo.paused) {
+        parentVideo.pause();
+      }
+    }
+  }
+
+  // Fullscreen Handlers for Parent
+  function toggleParentFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (parentVideoWrapper.requestFullscreen) {
+        parentVideoWrapper.requestFullscreen().catch(err => {
+          if (parentVideo.webkitEnterFullscreen) parentVideo.webkitEnterFullscreen();
+        });
+      } else if (parentVideoWrapper.webkitRequestFullscreen) {
+        parentVideoWrapper.webkitRequestFullscreen();
+      } else if (parentVideo.webkitEnterFullscreen) {
+        parentVideo.webkitEnterFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  }
+
+  btnParentFullscreen.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleParentFullscreen();
+  });
+
+  btnPlaybackFullscreen.addEventListener('click', () => {
+    toggleParentFullscreen();
+  });
+
+  // Double click parent video to fullscreen
+  parentVideoWrapper.addEventListener('dblclick', () => {
+    toggleParentFullscreen();
+  });
+
+  // Single click parent video to play/pause
+  parentVideo.addEventListener('click', () => {
+    if (isPlaying) {
+      socket.emit('parent:pause');
+    } else {
+      socket.emit('parent:play');
+    }
+  });
+
+  // Exit Fullscreen button
+  btnFsExit.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+  });
+
+  // Play/Pause inside Fullscreen floating bar
+  btnFsPlayPause.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isPlaying) {
+      socket.emit('parent:pause');
+    } else {
+      socket.emit('parent:play');
+    }
+  });
+
+  // Scrub inside Fullscreen floating bar
+  fsScrubSlider.addEventListener('input', () => {
+    fsTimeText.innerText = `${formatTime(fsScrubSlider.value)} / ${formatTime(duration)}`;
+  });
+
+  fsScrubSlider.addEventListener('change', () => {
+    socket.emit('parent:seek', { time: parseFloat(fsScrubSlider.value) });
+  });
+
+  // Speed selector inside Fullscreen floating bar
+  fsSpeedSelect.addEventListener('change', () => {
+    const rate = parseFloat(fsSpeedSelect.value);
+    setPlaybackRate(rate);
+  });
+
+  // PiP (Picture in Picture) for Parent
+  btnParentPip.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled && parentVideo.readyState >= 2) {
+        await parentVideo.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn('PiP not available:', err);
+    }
+  });
+
+  // Sound toggle for Parent
+  btnParentSoundToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    parentVideo.muted = !parentVideo.muted;
+    if (parentVideo.muted) {
+      parentSoundIcon.innerText = '🔇';
+      parentSoundText.innerText = 'Muted';
+    } else {
+      parentSoundIcon.innerText = '🔊';
+      parentSoundText.innerText = 'Sound On';
+      parentVideo.volume = 1.0;
+    }
+  });
+
+  // Remote Kid Fullscreen toggle
+  btnRemoteKidFs.addEventListener('click', () => {
+    socket.emit('parent:toggle_kid_fullscreen');
+    btnRemoteKidFs.style.transform = 'scale(0.9)';
+    setTimeout(() => { btnRemoteKidFs.style.transform = ''; }, 200);
+  });
 
   function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '00:00';

@@ -319,6 +319,208 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Synchronized Parent Video Player & Fullscreen */
+.parent-video-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 280px;
+  background: #000;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 2px solid var(--border-color);
+  margin-bottom: 20px;
+  cursor: pointer;
+}
+
+#parent-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.parent-video-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(99, 102, 241, 0.85);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.parent-video-controls-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.btn-parent-action {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-parent-action:hover {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.btn-parent-fs-action {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-color: #818cf8;
+  font-weight: 700;
+}
+
+.btn-parent-fs-action:hover {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+}
+
+.btn-ctrl-fs {
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+.btn-ctrl-fs:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+/* Fullscreen Mode for Parent Player */
+.parent-video-wrapper:fullscreen,
+.parent-video-wrapper:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  border: none;
+  background: #000;
+}
+
+.parent-video-wrapper:fullscreen #parent-video,
+.parent-video-wrapper:-webkit-full-screen #parent-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Fullscreen Floating Bar */
+.parent-fs-floating-bar {
+  display: none;
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50px;
+  padding: 10px 24px;
+  gap: 16px;
+  align-items: center;
+  width: 90%;
+  max-width: 820px;
+  z-index: 99999;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.parent-video-wrapper:fullscreen .parent-fs-floating-bar,
+.parent-video-wrapper:-webkit-full-screen .parent-fs-floating-bar {
+  display: flex;
+}
+
+.parent-video-wrapper:fullscreen .parent-video-controls-overlay,
+.parent-video-wrapper:-webkit-full-screen .parent-video-controls-overlay {
+  display: none;
+}
+
+.btn-fs-ctrl {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-fs-ctrl:hover {
+  background: var(--primary);
+}
+
+.btn-fs-exit {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.btn-fs-exit:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.fs-scrub-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #334155;
+  cursor: pointer;
+}
+
+.fs-scrub-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+}
+
+.fs-time-text {
+  font-family: monospace;
+  font-size: 13px;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.fs-speed-select {
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #fff;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 20px;
+  outline: none;
+  cursor: pointer;
+}
+
 /* Scrub Bar & Timers */
 .scrub-container {
   display: flex;

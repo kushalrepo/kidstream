@@ -166,6 +166,14 @@
     video.volume = data.volume;
   });
 
+  socket.on('control:toggle_fullscreen', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(e => console.log('Fullscreen request failed:', e));
+    } else {
+      document.exitFullscreen().catch(e => console.log('Exit fullscreen error:', e));
+    }
+  });
+
   function loadVideo(filename, startTime = 0, autoPlay = false) {
     const streamUrl = `/api/stream/${encodeURIComponent(filename)}`;
     if (video.src !== window.location.origin + streamUrl) {
