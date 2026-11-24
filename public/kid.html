@@ -45,6 +45,13 @@
     <div class="math-card">
       <div class="math-top-badge" id="math-badge">🌟 Quick Brain Challenge! 🌟</div>
       
+      <!-- Strikes / Hearts Bar -->
+      <div class="math-strikes-bar" id="math-strikes-bar" title="Remaining Tries">
+        <span class="strike-heart">❤️</span>
+        <span class="strike-heart">❤️</span>
+        <span class="strike-heart">❤️</span>
+      </div>
+
       <div class="math-mascot-container">
         <div class="math-mascot" id="math-mascot">🦖</div>
       </div>
@@ -52,14 +59,57 @@
       <h2 class="math-title" id="math-question">What is 3 + 2?</h2>
       <p class="math-subtitle" id="math-prompt">Count the fun items to solve!</p>
 
-      <!-- Visual Counting Box (Apples, Stars, Balloons, etc.) -->
+      <!-- Anti-Button-Mashing Cooldown Timer Banner -->
+      <div class="math-cooldown-banner hidden" id="math-cooldown-banner">
+        <span>⏳</span> <strong>Think & Count:</strong> Please wait <span id="cooldown-sec">3</span>s before trying again!
+      </div>
+
+      <!-- Mode A: Visual Counting Box (Apples, Stars, Balloons, etc.) -->
       <div class="math-visual-box" id="math-visual-box">
         <!-- Rendered dynamically via JS -->
       </div>
 
-      <!-- Multiple Choice Options -->
+      <!-- Multiple Choice Options (Mode: choice) -->
       <div class="math-options-grid" id="math-options-grid">
         <!-- Buttons rendered dynamically -->
+      </div>
+
+      <!-- Mode B: Number Keypad (Mode: keypad) -->
+      <div class="math-keypad-box hidden" id="math-keypad-box">
+        <div class="keypad-display" id="keypad-display">?</div>
+        <div class="keypad-grid">
+          <button class="btn-key" data-val="1">1</button>
+          <button class="btn-key" data-val="2">2</button>
+          <button class="btn-key" data-val="3">3</button>
+          <button class="btn-key" data-val="4">4</button>
+          <button class="btn-key" data-val="5">5</button>
+          <button class="btn-key" data-val="6">6</button>
+          <button class="btn-key" data-val="7">7</button>
+          <button class="btn-key" data-val="8">8</button>
+          <button class="btn-key" data-val="9">9</button>
+          <button class="btn-key btn-key-action" id="btn-key-clear">⌫</button>
+          <button class="btn-key" data-val="0">0</button>
+          <button class="btn-key btn-key-submit" id="btn-key-submit">✓</button>
+        </div>
+      </div>
+
+      <!-- Mode C: Interactive Tap-to-Count (Mode: tapcount) -->
+      <div class="math-tapcount-box hidden" id="math-tapcount-box">
+        <div class="tapcount-instructions" id="tapcount-instructions">Tap each item one by one to count them! 👆</div>
+        <div class="tapcount-items-grid" id="tapcount-items-grid"></div>
+        <button class="btn-tapcount-confirm hidden" id="btn-tapcount-confirm">
+          <span>🎉</span> I Counted <span id="tapcount-current-val">0</span>! (Check)
+        </button>
+      </div>
+
+      <!-- 3-Strike Lockout Overlay (When spamming/mashing continues) -->
+      <div class="math-lockout-box hidden" id="math-lockout-box">
+        <div style="font-size: 52px; margin-bottom: 8px;">🛑</div>
+        <h3 style="color: #ef4444; font-size: 24px; margin-bottom: 6px;">Take a Pause!</h3>
+        <p style="color: #64748b; font-size: 16px; margin-bottom: 14px;">You tried 3 times. Ask Mom or Dad to help unlock your video!</p>
+        <div style="background: #f1f5f9; padding: 10px 16px; border-radius: 12px; font-size: 14px; color: #475569;">
+          Waiting for parent remote approval...
+        </div>
       </div>
 
       <div class="math-result-message" id="math-result-msg"></div>
@@ -87,8 +137,8 @@
 
   <!-- Scripts with cache busters -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=2.6"></script>
-  <script src="/js/confetti.js?v=2.6"></script>
-  <script src="/js/kid.js?v=2.6"></script>
+  <script src="/js/sounds.js?v=2.7"></script>
+  <script src="/js/confetti.js?v=2.7"></script>
+  <script src="/js/kid.js?v=2.7"></script>
 </body>
 </html>

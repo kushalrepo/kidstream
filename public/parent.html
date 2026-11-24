@@ -199,6 +199,55 @@
           <button class="btn-dismiss-int hidden" id="btn-dismiss-int">Resume Video</button>
         </div>
 
+        <!-- Kid Lockout Alert Banner (Visible when kid is spamming/locked out) -->
+        <div class="math-lockout-alert hidden" id="math-lockout-alert">
+          <div class="lockout-alert-header">
+            <span style="font-size: 26px;">🛑</span>
+            <div>
+              <div style="font-weight: 700; color: #ef4444; font-size: 14px;">Kid Screen Locked Out (Spam / Guessing)</div>
+              <div style="font-size: 12px; color: var(--text-muted);" id="lockout-alert-desc">Child used all attempts without answering correctly.</div>
+            </div>
+          </div>
+          <div class="lockout-actions">
+            <button class="btn-lockout-action btn-lockout-unlock" id="btn-lockout-unlock">🔓 Unlock & Resume Video</button>
+            <button class="btn-lockout-action btn-lockout-retry" id="btn-lockout-retry">🔄 Send Easy Problem</button>
+          </div>
+        </div>
+
+        <!-- Anti-Spam Challenge Settings -->
+        <div class="anti-spam-settings">
+          <div class="input-row" style="margin-bottom: 10px;">
+            <div style="flex: 1;">
+              <label class="setting-mini-label" for="math-mode-select">🛡️ Challenge Style:</label>
+              <select id="math-mode-select" class="input-ctrl">
+                <option value="choice">🔘 Multiple Choice (Anti-Spam)</option>
+                <option value="tapcount" selected>👆 Interactive Tap-to-Count (Anti-Spam)</option>
+                <option value="keypad">🔢 Number Keypad (Type Answer)</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-row" style="margin-bottom: 4px;">
+            <div style="flex: 1;">
+              <label class="setting-mini-label" for="math-cooldown-select">⏳ Wrong Answer Cooldown:</label>
+              <select id="math-cooldown-select" class="input-ctrl">
+                <option value="3" selected>3 Seconds (Recommended)</option>
+                <option value="5">5 Seconds (Strict)</option>
+                <option value="2">2 Seconds (Quick)</option>
+                <option value="0">None (0s)</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label class="setting-mini-label" for="math-lockout-select">❤️ Strikes Before Lockout:</label>
+              <select id="math-lockout-select" class="input-ctrl">
+                <option value="3" selected>3 Strikes (Lockout)</option>
+                <option value="2">2 Strikes (Strict)</option>
+                <option value="5">5 Strikes (Gentle)</option>
+                <option value="0">Unlimited (No Lockout)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Quick Problem Presets -->
         <div class="section-label">Quick Math Presets</div>
         <div class="preset-grid">
@@ -357,6 +406,6 @@
 
   <!-- Scripts with cache busters -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/parent.js?v=2.2"></script>
+  <script src="/js/parent.js?v=2.7"></script>
 </body>
 </html>

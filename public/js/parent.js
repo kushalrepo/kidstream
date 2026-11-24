@@ -58,6 +58,13 @@
   const customWrongs = document.getElementById('custom-wrongs');
   const btnTriggerMath = document.getElementById('btn-trigger-math');
   const autoTimerSelect = document.getElementById('auto-timer-select');
+  const mathModeSelect = document.getElementById('math-mode-select');
+  const mathCooldownSelect = document.getElementById('math-cooldown-select');
+  const mathLockoutSelect = document.getElementById('math-lockout-select');
+  const mathLockoutAlert = document.getElementById('math-lockout-alert');
+  const lockoutAlertDesc = document.getElementById('lockout-alert-desc');
+  const btnLockoutUnlock = document.getElementById('btn-lockout-unlock');
+  const btnLockoutRetry = document.getElementById('btn-lockout-retry');
 
   // TTS elements
   const ttsQuickButtons = document.querySelectorAll('.btn-tts-quick');
@@ -484,8 +491,43 @@
     clearInterruptionUI();
   });
 
+  // Handle 3-strike lockout alert from kid screen
+  socket.on('parent:kid_math_locked', (data) => {
+    if (mathLockoutAlert) {
+      mathLockoutAlert.classList.remove('hidden');
+      if (lockoutAlertDesc) {
+        lockoutAlertDesc.innerText = `Kid made ${data.mistakes || 3} wrong attempts. Screen locked to prevent guessing!`;
+      }
+    }
+    intStatusBadge.innerText = 'STATUS: LOCKED OUT 🛑';
+    intStatusBadge.style.color = 'var(--danger)';
+    intStatusText.innerText = 'Kid screen paused and locked. Waiting for your action.';
+  });
+
+  if (btnLockoutUnlock) {
+    btnLockoutUnlock.addEventListener('click', () => {
+      socket.emit('parent:unlock_math');
+      if (mathLockoutAlert) mathLockoutAlert.classList.add('hidden');
+      clearInterruptionUI();
+    });
+  }
+
+  if (btnLockoutRetry) {
+    btnLockoutRetry.addEventListener('click', () => {
+      selectedMathPreset = 'add-easy';
+      mathPresets.forEach(b => {
+        b.classList.toggle('active', b.dataset.type === 'add-easy');
+      });
+      if (mathLockoutAlert) mathLockoutAlert.classList.add('hidden');
+      const problem = generateMathProblem();
+      socket.emit('parent:trigger_math', problem);
+      showInterruptionActive(problem);
+    });
+  }
+
   socket.on('kid:math_result', (data) => {
     if (data.isCorrect) {
+      if (mathLockoutAlert) mathLockoutAlert.classList.add('hidden');
       intStatusBadge.innerText = 'STATUS: SOLVED! 🎉';
       intStatusBadge.style.color = 'var(--success)';
       intStatusText.innerText = `Kid answered "${data.answerChosen}" correctly! Video resuming...`;
@@ -509,9 +551,14 @@
     intStatusBadge.style.color = 'var(--text-muted)';
     intStatusText.innerText = 'Video is playing uninterrupted';
     btnDismissInt.classList.add('hidden');
+    if (mathLockoutAlert) mathLockoutAlert.classList.add('hidden');
   }
 
   function generateMathProblem() {
+    const mode = mathModeSelect ? mathModeSelect.value : 'choice';
+    const cooldownSec = mathCooldownSelect ? parseInt(mathCooldownSelect.value, 10) : 3;
+    const maxAttempts = mathLockoutSelect ? parseInt(mathLockoutSelect.value, 10) : 3;
+
     // Check if custom is provided
     const customQ = customQuestion.value.trim();
     const customA = customAnswer.value.trim();
@@ -529,7 +576,10 @@
         promptText: 'Can you solve this challenge?',
         answer: customA,
         options: options,
-        visualTheme: mathThemeSelect.value
+        visualTheme: mathThemeSelect.value,
+        mode: mode,
+        cooldownSec: cooldownSec,
+        maxAttempts: maxAttempts
       };
     }
 
@@ -595,7 +645,10 @@
       promptText: 'Count the fun items to solve!',
       answer: String(answer),
       options: options.map(String),
-      visualTheme: theme
+      visualTheme: theme,
+      mode: mode,
+      cooldownSec: cooldownSec,
+      maxAttempts: maxAttempts
     };
   }
 

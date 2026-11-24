@@ -23,6 +23,29 @@
   const mathVisualBox = document.getElementById('math-visual-box');
   const mathOptionsGrid = document.getElementById('math-options-grid');
   const mathResultMsg = document.getElementById('math-result-msg');
+  const mathStrikesBar = document.getElementById('math-strikes-bar');
+  const mathCooldownBanner = document.getElementById('math-cooldown-banner');
+  const cooldownSecSpan = document.getElementById('cooldown-sec');
+  const mathKeypadBox = document.getElementById('math-keypad-box');
+  const keypadDisplay = document.getElementById('keypad-display');
+  const btnKeyClear = document.getElementById('btn-key-clear');
+  const btnKeySubmit = document.getElementById('btn-key-submit');
+  const mathTapcountBox = document.getElementById('math-tapcount-box');
+  const tapcountInstructions = document.getElementById('tapcount-instructions');
+  const tapcountItemsGrid = document.getElementById('tapcount-items-grid');
+  const btnTapcountConfirm = document.getElementById('btn-tapcount-confirm');
+  const tapcountCurrentVal = document.getElementById('tapcount-current-val');
+  const mathLockoutBox = document.getElementById('math-lockout-box');
+
+  // Anti-Button-Mashing State
+  let currentMistakes = 0;
+  let maxAttempts = 3;
+  let cooldownDuration = 3;
+  let isCooldownActive = false;
+  let cooldownInterval = null;
+  let keypadBuffer = '';
+  let tapcountCount = 0;
+  let tapcountTarget = 0;
 
   // TTS Toast Elements
   const ttsToast = document.getElementById('tts-toast');
@@ -323,6 +346,20 @@
     // Pause video
     video.pause();
 
+    // Reset mistake counter & anti-mashing parameters
+    currentMistakes = 0;
+    maxAttempts = (problem.maxAttempts !== undefined) ? parseInt(problem.maxAttempts, 10) : 3;
+    cooldownDuration = (problem.cooldownSec !== undefined) ? parseInt(problem.cooldownSec, 10) : 3;
+    isCooldownActive = false;
+    clearInterval(cooldownInterval);
+
+    // Hide any previous cooldown or lockout banners
+    if (mathCooldownBanner) mathCooldownBanner.classList.add('hidden');
+    if (mathLockoutBox) mathLockoutBox.classList.add('hidden');
+
+    // Render hearts / strikes
+    renderStrikesBar(0, maxAttempts);
+
     // Play chime sound
     if (window.kidSounds) window.kidSounds.playChime();
 
@@ -333,15 +370,190 @@
     mathResultMsg.innerText = '';
     mathResultMsg.className = 'math-result-message';
 
-    // Render visual items counter
-    renderVisualCounter(problem);
+    // Hide all mode containers before displaying the selected mode
+    mathOptionsGrid.classList.add('hidden');
+    mathKeypadBox.classList.add('hidden');
+    mathTapcountBox.classList.add('hidden');
+    mathVisualBox.classList.add('hidden');
 
-    // Render answer options
-    renderAnswerOptions(problem);
+    const mode = problem.mode || 'choice';
+
+    if (mode === 'tapcount') {
+      // Mode C: Interactive Tap-To-Count
+      mathTapcountBox.classList.remove('hidden');
+      setupTapCountMode(problem);
+    } else if (mode === 'keypad') {
+      // Mode B: Number Keypad
+      mathVisualBox.classList.remove('hidden');
+      renderVisualCounter(problem);
+      mathKeypadBox.classList.remove('hidden');
+      setupKeypadMode(problem);
+    } else {
+      // Mode A: Multiple Choice (with Anti-Mashing Cooldown)
+      mathVisualBox.classList.remove('hidden');
+      renderVisualCounter(problem);
+      mathOptionsGrid.classList.remove('hidden');
+      renderAnswerOptions(problem);
+    }
 
     mathOverlay.classList.remove('hidden');
   }
 
+  // Render Strikes / Hearts Bar
+  function renderStrikesBar(mistakes, max) {
+    if (!mathStrikesBar) return;
+    mathStrikesBar.innerHTML = '';
+    if (!max || max <= 0 || max > 10) {
+      mathStrikesBar.classList.add('hidden');
+      return;
+    }
+    mathStrikesBar.classList.remove('hidden');
+    const remaining = Math.max(0, max - mistakes);
+    for (let i = 0; i < max; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'strike-heart' + (i >= remaining ? ' lost' : '');
+      heart.innerText = i >= remaining ? '💔' : '❤️';
+      mathStrikesBar.appendChild(heart);
+    }
+  }
+
+  // Anti-Button-Mashing Cooldown Timer
+  function startCooldown() {
+    if (cooldownDuration <= 0) return;
+    isCooldownActive = true;
+    clearInterval(cooldownInterval);
+
+    // Disable all options and keys
+    const optBtns = mathOptionsGrid.querySelectorAll('.btn-math-opt');
+    optBtns.forEach(b => {
+      b.classList.add('cooldown');
+      b.disabled = true;
+    });
+
+    const keyBtns = mathKeypadBox.querySelectorAll('.btn-key');
+    keyBtns.forEach(b => {
+      b.classList.add('cooldown');
+      b.disabled = true;
+    });
+
+    if (btnTapcountConfirm) {
+      btnTapcountConfirm.disabled = true;
+    }
+
+    let remaining = cooldownDuration;
+    if (cooldownSecSpan) cooldownSecSpan.innerText = remaining;
+    if (mathCooldownBanner) mathCooldownBanner.classList.remove('hidden');
+
+    cooldownInterval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(cooldownInterval);
+        if (mathCooldownBanner) mathCooldownBanner.classList.add('hidden');
+        isCooldownActive = false;
+
+        // Re-enable options except permanently failed ones
+        optBtns.forEach(b => {
+          b.classList.remove('cooldown');
+          if (!b.classList.contains('wrong-disabled')) {
+            b.disabled = false;
+          }
+        });
+
+        keyBtns.forEach(b => {
+          b.classList.remove('cooldown');
+          b.disabled = false;
+        });
+
+        if (btnTapcountConfirm) {
+          btnTapcountConfirm.disabled = false;
+        }
+      } else {
+        if (cooldownSecSpan) cooldownSecSpan.innerText = remaining;
+      }
+    }, 1000);
+  }
+
+  // Handle wrong attempt / strike
+  function triggerMistake(sourceBtn) {
+    currentMistakes++;
+    renderStrikesBar(currentMistakes, maxAttempts);
+
+    if (maxAttempts > 0 && currentMistakes >= maxAttempts) {
+      triggerLockout();
+      return;
+    }
+
+    if (window.kidSounds) window.kidSounds.playBoing();
+
+    if (sourceBtn) {
+      sourceBtn.classList.add('wrong', 'wrong-disabled');
+      sourceBtn.disabled = true;
+    }
+
+    startCooldown();
+  }
+
+  // 3-Strike Lockout Overlay when kid keeps spamming
+  function triggerLockout() {
+    clearInterval(cooldownInterval);
+    if (mathCooldownBanner) mathCooldownBanner.classList.add('hidden');
+    mathOptionsGrid.classList.add('hidden');
+    mathKeypadBox.classList.add('hidden');
+    mathTapcountBox.classList.add('hidden');
+    mathVisualBox.classList.add('hidden');
+    if (mathLockoutBox) mathLockoutBox.classList.remove('hidden');
+
+    mathResultMsg.innerText = 'Ask Mom or Dad to help you unlock! 🎈';
+    mathResultMsg.className = 'math-result-message';
+
+    if (window.kidSounds) window.kidSounds.playBoing();
+
+    // Alert parent dashboard that kid reached lockout threshold
+    socket.emit('kid:math_locked', {
+      problemId: currentProblem ? currentProblem.id : null,
+      mistakes: currentMistakes,
+      maxAttempts: maxAttempts
+    });
+  }
+
+  // Success Celebration
+  function handleSuccess(celebrationElement) {
+    clearInterval(cooldownInterval);
+    if (mathCooldownBanner) mathCooldownBanner.classList.add('hidden');
+    isCooldownActive = false;
+
+    if (window.kidSounds) {
+      window.kidSounds.playSuccessFanfare();
+    }
+    if (window.kidConfetti && celebrationElement) {
+      const rect = celebrationElement.getBoundingClientRect();
+      window.kidConfetti.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 80);
+    }
+
+    mathResultMsg.innerText = '🎉 SUPERSTAR! You got it right! 🎉';
+    mathResultMsg.className = 'math-result-message success';
+
+    // Prevent any more clicks during celebration
+    const allBtns = mathOverlay.querySelectorAll('button');
+    allBtns.forEach(b => {
+      b.style.pointerEvents = 'none';
+      if (b !== celebrationElement) b.style.opacity = '0.5';
+    });
+
+    socket.emit('kid:submit_math', {
+      problemId: currentProblem ? currentProblem.id : null,
+      answerChosen: currentProblem ? currentProblem.answer : '',
+      isCorrect: true,
+      correctAnswer: currentProblem ? currentProblem.answer : ''
+    });
+
+    // Resume video automatically after 2.2 seconds celebration!
+    setTimeout(() => {
+      hideMathInterruption(true);
+    }, 2200);
+  }
+
+  // Render Visual Counters
   function renderVisualCounter(problem) {
     mathVisualBox.innerHTML = '';
     const theme = problem.visualTheme || 'fruits';
@@ -386,12 +598,14 @@
     }
   }
 
+  // Render Multiple Choice Options (Anti-Mashing)
   function renderAnswerOptions(problem) {
     mathOptionsGrid.innerHTML = '';
     const options = problem.options || [problem.answer];
 
     options.forEach((opt, idx) => {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = `btn-math-opt opt-color-${idx % 4}`;
       btn.innerText = opt;
 
@@ -404,44 +618,14 @@
   }
 
   function handleOptionClick(btn, chosenAnswer, problem) {
+    if (isCooldownActive || btn.disabled) return;
+
     const isCorrect = String(chosenAnswer).trim() === String(problem.answer).trim();
 
     if (isCorrect) {
-      if (window.kidSounds) {
-        window.kidSounds.playSuccessFanfare();
-      }
-      if (window.kidConfetti) {
-        const rect = btn.getBoundingClientRect();
-        window.kidConfetti.burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 80);
-      }
-
       btn.classList.add('correct');
-      mathResultMsg.innerText = '🎉 SUPERSTAR! You got it right! 🎉';
-      mathResultMsg.className = 'math-result-message success';
-
-      // Disable other buttons
-      const allBtns = mathOptionsGrid.querySelectorAll('button');
-      allBtns.forEach(b => {
-        b.style.pointerEvents = 'none';
-        if (b !== btn) b.style.opacity = '0.5';
-      });
-
-      // Send result to parent
-      socket.emit('kid:submit_math', {
-        problemId: problem.id,
-        answerChosen: chosenAnswer,
-        isCorrect: true,
-        correctAnswer: problem.answer
-      });
-
-      // Resume video automatically after 2.2 seconds celebration!
-      setTimeout(() => {
-        hideMathInterruption(true);
-      }, 2200);
-
+      handleSuccess(btn);
     } else {
-      if (window.kidSounds) window.kidSounds.playBoing();
-      btn.classList.add('wrong');
       mathResultMsg.innerText = '⭐ Keep trying! You can do it! ⭐';
       mathResultMsg.className = 'math-result-message';
 
@@ -452,15 +636,169 @@
         correctAnswer: problem.answer
       });
 
-      setTimeout(() => {
-        btn.classList.remove('wrong');
-      }, 600);
+      triggerMistake(btn);
     }
+  }
+
+  // Mode C: Interactive Tap-To-Count Mode Setup
+  function setupTapCountMode(problem) {
+    tapcountItemsGrid.innerHTML = '';
+    let target = parseInt(problem.answer, 10);
+    if (isNaN(target) || target <= 0) target = 5;
+    target = Math.min(target, 15);
+
+    const theme = problem.visualTheme || 'fruits';
+    const icons = themeIcons[theme] || themeIcons.fruits;
+    const icon = icons[0];
+
+    tapcountTarget = target;
+    tapcountCount = 0;
+    if (tapcountCurrentVal) tapcountCurrentVal.innerText = '0';
+    if (btnTapcountConfirm) {
+      btnTapcountConfirm.classList.add('hidden');
+      btnTapcountConfirm.disabled = false;
+    }
+
+    for (let i = 0; i < target; i++) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'tapcount-item';
+      item.setAttribute('data-index', i + 1);
+      item.innerHTML = `<span class="tapcount-emoji">${icon}</span>`;
+
+      item.addEventListener('click', () => {
+        if (isCooldownActive) return;
+        if (item.classList.contains('counted')) return;
+
+        tapcountCount++;
+        item.classList.add('counted');
+
+        // Add badge showing count number on the item
+        const badge = document.createElement('span');
+        badge.className = 'tapcount-badge';
+        badge.innerText = tapcountCount;
+        item.appendChild(badge);
+
+        // Play pop sound
+        if (window.kidSounds) window.kidSounds.playPop();
+
+        if (tapcountCurrentVal) tapcountCurrentVal.innerText = tapcountCount;
+
+        // If all items counted, reveal confirm button!
+        if (tapcountCount >= tapcountTarget) {
+          if (btnTapcountConfirm) {
+            btnTapcountConfirm.classList.remove('hidden');
+            btnTapcountConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+          if (window.kidSounds) window.kidSounds.playChime();
+        }
+      });
+
+      tapcountItemsGrid.appendChild(item);
+    }
+  }
+
+  // Confirm button for Tap-to-count
+  if (btnTapcountConfirm) {
+    btnTapcountConfirm.addEventListener('click', () => {
+      if (isCooldownActive) return;
+      if (tapcountCount === tapcountTarget) {
+        handleSuccess(btnTapcountConfirm);
+      } else {
+        mathResultMsg.innerText = `You counted ${tapcountCount}, but there are ${tapcountTarget}! Try tapping them all!`;
+        mathResultMsg.className = 'math-result-message';
+        triggerMistake(null);
+      }
+    });
+  }
+
+  // Mode B: Number Keypad Mode Setup & Listeners
+  function setupKeypadMode(problem) {
+    keypadBuffer = '';
+    if (keypadDisplay) {
+      keypadDisplay.innerText = '?';
+      keypadDisplay.classList.remove('shake', 'correct-glow');
+    }
+  }
+
+  function handleKeypadInput(val) {
+    if (isCooldownActive) return;
+    if (keypadBuffer.length < 4) {
+      keypadBuffer += val;
+      if (keypadDisplay) keypadDisplay.innerText = keypadBuffer;
+      if (window.kidSounds) window.kidSounds.playPop();
+    }
+  }
+
+  function handleKeypadClear() {
+    if (isCooldownActive) return;
+    keypadBuffer = '';
+    if (keypadDisplay) keypadDisplay.innerText = '?';
+    if (window.kidSounds) window.kidSounds.playPop();
+  }
+
+  function handleKeypadSubmit() {
+    if (isCooldownActive) return;
+    if (!keypadBuffer) {
+      if (keypadDisplay) {
+        keypadDisplay.classList.add('shake');
+        setTimeout(() => keypadDisplay.classList.remove('shake'), 400);
+      }
+      return;
+    }
+
+    const isCorrect = String(keypadBuffer).trim() === String(currentProblem.answer).trim();
+    if (isCorrect) {
+      if (keypadDisplay) keypadDisplay.classList.add('correct-glow');
+      handleSuccess(keypadDisplay);
+    } else {
+      if (keypadDisplay) keypadDisplay.classList.add('shake');
+      mathResultMsg.innerText = `⭐ ${keypadBuffer} is close, keep trying! ⭐`;
+      mathResultMsg.className = 'math-result-message';
+
+      socket.emit('kid:submit_math', {
+        problemId: currentProblem ? currentProblem.id : null,
+        answerChosen: keypadBuffer,
+        isCorrect: false,
+        correctAnswer: currentProblem ? currentProblem.answer : ''
+      });
+
+      setTimeout(() => {
+        if (keypadDisplay) {
+          keypadDisplay.classList.remove('shake');
+          keypadBuffer = '';
+          keypadDisplay.innerText = '?';
+        }
+      }, 500);
+
+      triggerMistake(null);
+    }
+  }
+
+  // Keypad button listeners
+  const keypadBtns = document.querySelectorAll('#math-keypad-box .btn-key[data-val]');
+  keypadBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      handleKeypadInput(btn.getAttribute('data-val'));
+    });
+  });
+
+  if (btnKeyClear) {
+    btnKeyClear.addEventListener('click', handleKeypadClear);
+  }
+
+  if (btnKeySubmit) {
+    btnKeySubmit.addEventListener('click', handleKeypadSubmit);
   }
 
   function hideMathInterruption(resumeVideo = false) {
     mathOverlay.classList.add('hidden');
+    clearInterval(cooldownInterval);
+    isCooldownActive = false;
     currentProblem = null;
+    currentMistakes = 0;
+    if (mathLockoutBox) mathLockoutBox.classList.add('hidden');
+    if (mathCooldownBanner) mathCooldownBanner.classList.add('hidden');
     if (resumeVideo) {
       video.play().catch(e => console.log('Resume blocked:', e));
     }

@@ -522,6 +522,19 @@ io.on('connection', (socket) => {
     io.to('parents').emit('interruption:cleared');
   });
 
+  socket.on('parent:unlock_math', () => {
+    console.log(`[Math] Parent unlocked math challenge`);
+    state.activeInterruption = null;
+    io.to('kids').emit('interruption:dismiss');
+    io.to('parents').emit('interruption:cleared');
+  });
+
+  // Kid reports 3-strike lockout (spamming/mashing detected)
+  socket.on('kid:math_locked', (data) => {
+    console.log(`[Math] Kid locked out:`, data);
+    io.to('parents').emit('parent:kid_math_locked', data);
+  });
+
   // Kid submits answer
   socket.on('kid:submit_math', (data) => {
     // Relay to parent dashboard
