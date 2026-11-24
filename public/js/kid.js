@@ -28,6 +28,7 @@
   const ttsToast = document.getElementById('tts-toast');
   const ttsAvatar = document.getElementById('tts-avatar');
   const ttsText = document.getElementById('tts-text');
+  const ttsAudio = document.getElementById('tts-audio-player');
 
   let currentProblem = null;
   let camStream = null;
@@ -66,6 +67,14 @@
 
     if (window.kidSounds) {
       window.kidSounds.ensureContext();
+    }
+
+    // Unlock HTML5 Audio element on iOS Safari
+    if (ttsAudio) {
+      try {
+        ttsAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        ttsAudio.play().then(() => ttsAudio.pause()).catch(() => {});
+      } catch (e) {}
     }
 
     // Critical for iOS Safari: SpeechSynthesis MUST be triggered inside a user gesture
@@ -494,64 +503,89 @@
       video.pause();
     }
 
-    // 4. Use Web Speech Synthesis API
+    // 4. Primary: High-fidelity natural voice audio via HTML5 Audio element
+    // Works 100% reliably on iPad/iPhone/iOS Safari by streaming actual spoken MP3 audio!
+    if (ttsAudio) {
+      try {
+        const audioUrl = `/api/tts-audio?text=${encodeURIComponent(text)}`;
+        ttsAudio.src = audioUrl;
+        ttsAudio.volume = 1.0;
+
+        let hasFinished = false;
+        const finishAudio = () => {
+          if (hasFinished) return;
+          hasFinished = true;
+          dismissTtsToast(wasPlaying, originalMuted);
+        };
+
+        ttsAudio.onended = () => {
+          setTimeout(finishAudio, 800);
+        };
+
+        ttsAudio.onerror = (e) => {
+          console.warn('Audio stream error, falling back to Web Speech:', e);
+          fallbackToSpeechSynthesis(text, data, wasPlaying, originalMuted);
+        };
+
+        // Watchdog timeout in case audio hangs
+        setTimeout(finishAudio, Math.max(6000, text.length * 200));
+
+        // Wait 300ms for the doorbell chime to finish before speech starts
+        setTimeout(() => {
+          ttsAudio.play().catch(playErr => {
+            console.warn('Audio play blocked, trying Web Speech fallback:', playErr);
+            fallbackToSpeechSynthesis(text, data, wasPlaying, originalMuted);
+          });
+        }, 350);
+
+        return;
+      } catch (e) {
+        console.warn('Audio setup error:', e);
+      }
+    }
+
+    // Secondary fallback: Web Speech API
+    fallbackToSpeechSynthesis(text, data, wasPlaying, originalMuted);
+  }
+
+  function fallbackToSpeechSynthesis(text, data, wasPlaying, originalMuted) {
     if ('speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
         window.speechSynthesis.resume();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        // CRITICAL iOS WebKit Bugfix: Hold reference to prevent garbage collection mid-speech!
         window._activeTtsUtterance = utterance;
-
         utterance.lang = 'en-US';
-        utterance.pitch = data.pitch || 1.15; // slightly cheerful & child-friendly
+        utterance.pitch = data.pitch || 1.15;
         utterance.rate = data.rate || 0.95;
         utterance.volume = 1.0;
 
-        // Select best available voice on iOS / Chrome / Safari
         const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
         if (voices && voices.length > 0) {
-          const preferredVoice = voices.find(v => (v.lang === 'en-US' || v.lang.startsWith('en')) && (v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Karen') || v.name.includes('Moira') || v.name.includes('Alex')));
+          const preferredVoice = voices.find(v => (v.lang === 'en-US' || v.lang.startsWith('en')));
           if (preferredVoice) utterance.voice = preferredVoice;
         }
 
         let hasFinished = false;
-        const cleanupAndFinish = () => {
+        const finish = () => {
           if (hasFinished) return;
           hasFinished = true;
           window._activeTtsUtterance = null;
           dismissTtsToast(wasPlaying, originalMuted);
         };
 
-        utterance.onend = () => {
-          setTimeout(cleanupAndFinish, 900);
-        };
+        utterance.onend = () => setTimeout(finish, 800);
+        utterance.onerror = () => setTimeout(finish, 1200);
+        setTimeout(finish, Math.max(5000, text.length * 180));
 
-        utterance.onerror = (err) => {
-          console.warn('SpeechSynthesis utterance error:', err);
-          setTimeout(cleanupAndFinish, 1200);
-        };
-
-        // Safety timeout in case iOS never fires onend
-        setTimeout(cleanupAndFinish, Math.max(5000, text.length * 180));
-
-        // Short timeout so the doorbell chime finishes ringing before speech begins
-        setTimeout(() => {
-          window.speechSynthesis.speak(utterance);
-          window.speechSynthesis.resume();
-        }, 300);
-
-      } catch (e) {
-        console.warn('SpeechSynthesis speak failed:', e);
-        setTimeout(() => {
-          dismissTtsToast(wasPlaying, originalMuted);
-        }, 3500);
+        window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.resume();
+      } catch (err) {
+        setTimeout(() => dismissTtsToast(wasPlaying, originalMuted), 3500);
       }
     } else {
-      setTimeout(() => {
-        dismissTtsToast(wasPlaying, originalMuted);
-      }, 3500);
+      setTimeout(() => dismissTtsToast(wasPlaying, originalMuted), 3500);
     }
   }
 

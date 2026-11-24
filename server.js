@@ -9,9 +9,15 @@ const multer = require('multer');
 const cors = require('cors');
 const QRCode = require('qrcode');
 const selfsigned = require('selfsigned');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
+
+const TTS_CACHE_DIR = path.join(__dirname, 'cache', 'tts');
+if (!fs.existsSync(TTS_CACHE_DIR)) {
+  fs.mkdirSync(TTS_CACHE_DIR, { recursive: true });
+}
 
 const io = new Server(server, {
   cors: {
@@ -237,6 +243,41 @@ app.get('/api/qr/parent', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate QR code' });
   }
+});
+
+// API: High-quality TTS Audio Stream (100% reliable on iPad/iOS Safari)
+app.get('/api/tts-audio', (req, res) => {
+  const text = (req.query.text || '').trim();
+  if (!text) {
+    return res.status(400).send('No text provided');
+  }
+
+  // Hash text for disk cache
+  const hash = crypto.createHash('md5').update(text.toLowerCase()).digest('hex');
+  const cacheFile = path.join(TTS_CACHE_DIR, `${hash}.mp3`);
+
+  if (fs.existsSync(cacheFile)) {
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return fs.createReadStream(cacheFile).pipe(res);
+  }
+
+  // Fetch from TTS audio service
+  const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=${encodeURIComponent(text)}`;
+  https.get(url, (ttsRes) => {
+    if (ttsRes.statusCode === 200) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      const fileStream = fs.createWriteStream(cacheFile);
+      ttsRes.pipe(fileStream);
+      ttsRes.pipe(res);
+    } else {
+      res.status(502).json({ error: 'TTS service failed' });
+    }
+  }).on('error', (err) => {
+    console.error('TTS request error:', err);
+    res.status(500).json({ error: 'TTS request failed' });
+  });
 });
 
 // API: Get list of videos

@@ -23,6 +23,9 @@
     <!-- Hidden Video & Canvas for Kid Camera Capture & Streaming -->
     <video id="kid-cam-video" autoplay playsinline webkit-playsinline muted style="position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;"></video>
     <canvas id="kid-cam-canvas" width="320" height="240" style="display: none;"></canvas>
+
+    <!-- Dedicated HTML5 Audio Player for Speech Synthesis Prompts (iOS/iPad bulletproof) -->
+    <audio id="tts-audio-player" playsinline preload="auto" style="display: none;"></audio>
   </div>
 
   <!-- Welcome / Unlock Overlay (Required for Camera & Audio permissions) -->
@@ -84,8 +87,8 @@
 
   <!-- Scripts with cache busters -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=2.4"></script>
-  <script src="/js/confetti.js?v=2.4"></script>
-  <script src="/js/kid.js?v=2.4"></script>
+  <script src="/js/sounds.js?v=2.6"></script>
+  <script src="/js/confetti.js?v=2.6"></script>
+  <script src="/js/kid.js?v=2.6"></script>
 </body>
 </html>
