@@ -34,6 +34,10 @@ body {
   padding-bottom: 60px;
 }
 
+.hidden {
+  display: none !important;
+}
+
 /* ========================================================
    HEADER & TOP NAVBAR
    ======================================================== */
@@ -1152,6 +1156,10 @@ body {
   justify-content: center;
   padding: 20px;
   animation: fadeIn 0.2s ease;
+}
+
+.upgrade-modal-backdrop.hidden {
+  display: none !important;
 }
 
 .upgrade-modal-card {

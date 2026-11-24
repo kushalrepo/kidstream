@@ -1041,26 +1041,48 @@
     }
   }
 
+  function openUpgradeModal() {
+    if (upgradeModal) {
+      upgradeModal.classList.remove('hidden');
+      upgradeModal.style.display = 'flex';
+    }
+  }
+
+  function closeUpgradeModal() {
+    if (upgradeModal) {
+      upgradeModal.classList.add('hidden');
+      upgradeModal.style.display = 'none';
+    }
+  }
+
   if (btnUpgrade) {
     btnUpgrade.addEventListener('click', () => {
-      upgradeModal.classList.remove('hidden');
+      openUpgradeModal();
       checkSystemUpdates(false);
     });
   }
 
   if (btnCloseUpgradeModal) {
-    btnCloseUpgradeModal.addEventListener('click', () => {
-      upgradeModal.classList.add('hidden');
+    btnCloseUpgradeModal.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeUpgradeModal();
     });
   }
 
   if (upgradeModal) {
     upgradeModal.addEventListener('click', (e) => {
       if (e.target === upgradeModal && !isUpgrading) {
-        upgradeModal.classList.add('hidden');
+        closeUpgradeModal();
       }
     });
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && upgradeModal && !isUpgrading) {
+      closeUpgradeModal();
+    }
+  });
 
   if (btnRefreshUpdate) {
     btnRefreshUpdate.addEventListener('click', () => checkSystemUpdates(false));
@@ -1069,6 +1091,9 @@
   if (btnDoUpgrade) {
     btnDoUpgrade.addEventListener('click', performUpgrade);
   }
+
+  // Ensure modal is closed on init
+  closeUpgradeModal();
 
   // Check for updates shortly after dashboard load
   setTimeout(() => checkSystemUpdates(false), 2500);
