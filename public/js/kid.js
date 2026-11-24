@@ -46,12 +46,54 @@
     candy: ['🍬', '🍭', '🧁', '🍩', '🍫']
   };
 
+  // Voice management for iOS / modern browsers
+  let availableVoices = [];
+  function populateVoices() {
+    if ('speechSynthesis' in window) {
+      availableVoices = window.speechSynthesis.getVoices();
+    }
+  }
+  populateVoices();
+  if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+  }
+
+  // Audio & Speech unlocker for iOS / iPadOS
+  let hasPrimedAudio = false;
+  function primeAudioAndSpeech() {
+    if (hasPrimedAudio) return;
+    hasPrimedAudio = true;
+
+    if (window.kidSounds) {
+      window.kidSounds.ensureContext();
+    }
+
+    // Critical for iOS Safari: SpeechSynthesis MUST be triggered inside a user gesture
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
+        const dummy = new SpeechSynthesisUtterance(' ');
+        dummy.volume = 0.01;
+        dummy.rate = 2.0;
+        window._activeTtsUtterance = dummy;
+        window.speechSynthesis.speak(dummy);
+      } catch (e) {
+        console.warn('SpeechSynthesis prime error:', e);
+      }
+    }
+  }
+
+  // Listen for any initial touch to unlock audio session immediately
+  document.addEventListener('touchstart', primeAudioAndSpeech, { once: true, passive: true });
+  document.addEventListener('pointerdown', primeAudioAndSpeech, { once: true, passive: true });
+
   // =================== Initial Setup & Audio Unlock ===================
 
   btnStart.addEventListener('click', () => {
-    // Unlock Web Audio context
+    primeAudioAndSpeech();
+
     if (window.kidSounds) {
-      window.kidSounds.ensureContext();
       window.kidSounds.playPop();
     }
 
@@ -417,55 +459,121 @@
 
   // =================== Text-To-Speech (TTS) Prompts ===================
 
+  let lastTtsData = null;
+
   socket.on('tts:prompt', (ttsData) => {
     speakPrompt(ttsData);
   });
 
   function speakPrompt(data) {
+    lastTtsData = data;
     const text = data.text || 'Finish your food!';
     const avatar = data.avatar || '🤖';
 
-    // Dip video volume
-    savedVolume = video.volume;
-    video.volume = Math.max(0.05, savedVolume * 0.15);
+    // 1. Play prompt alert sound via Web Audio API
+    if (window.kidSounds) {
+      window.kidSounds.ensureContext();
+      window.kidSounds.playPromptAlert();
+    }
 
-    // Play prompt alert sound
-    if (window.kidSounds) window.kidSounds.playPromptAlert();
-
-    // Display Toast Banner
+    // 2. Display Toast Banner with text and mascot
     ttsAvatar.innerText = avatar;
     ttsText.innerText = text;
     ttsToast.classList.remove('hidden');
 
-    // Use Web Speech Synthesis API
+    // 3. Audio Session management for iOS / iPad:
+    // IMPORTANT: On iOS, video.volume is read-only and ignored!
+    // A playing <video> element captures the audio session, causing iOS to silence SpeechSynthesis!
+    // We must pause and mute the video while speaking so iOS gives priority to speech!
+    const wasPlaying = !video.paused && !video.ended;
+    const originalMuted = video.muted;
+    savedVolume = video.volume;
+
+    video.muted = true;
+    if (wasPlaying) {
+      video.pause();
+    }
+
+    // 4. Use Web Speech Synthesis API
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // clear previous
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.pitch = data.pitch || 1.15; // slightly cheerful & child-friendly
-      utterance.rate = data.rate || 0.95;
+      try {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.resume();
 
-      // Select female or natural voice if available
-      const voices = window.speechSynthesis.getVoices();
-      const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Zira')));
-      if (preferredVoice) utterance.voice = preferredVoice;
+        const utterance = new SpeechSynthesisUtterance(text);
+        // CRITICAL iOS WebKit Bugfix: Hold reference to prevent garbage collection mid-speech!
+        window._activeTtsUtterance = utterance;
 
-      utterance.onend = () => {
-        setTimeout(dismissTtsToast, 1200);
-      };
+        utterance.lang = 'en-US';
+        utterance.pitch = data.pitch || 1.15; // slightly cheerful & child-friendly
+        utterance.rate = data.rate || 0.95;
+        utterance.volume = 1.0;
 
-      utterance.onerror = () => {
-        setTimeout(dismissTtsToast, 2500);
-      };
+        // Select best available voice on iOS / Chrome / Safari
+        const voices = availableVoices.length > 0 ? availableVoices : window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+          const preferredVoice = voices.find(v => (v.lang === 'en-US' || v.lang.startsWith('en')) && (v.name.includes('Samantha') || v.name.includes('Daniel') || v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Karen') || v.name.includes('Moira') || v.name.includes('Alex')));
+          if (preferredVoice) utterance.voice = preferredVoice;
+        }
 
-      window.speechSynthesis.speak(utterance);
+        let hasFinished = false;
+        const cleanupAndFinish = () => {
+          if (hasFinished) return;
+          hasFinished = true;
+          window._activeTtsUtterance = null;
+          dismissTtsToast(wasPlaying, originalMuted);
+        };
+
+        utterance.onend = () => {
+          setTimeout(cleanupAndFinish, 900);
+        };
+
+        utterance.onerror = (err) => {
+          console.warn('SpeechSynthesis utterance error:', err);
+          setTimeout(cleanupAndFinish, 1200);
+        };
+
+        // Safety timeout in case iOS never fires onend
+        setTimeout(cleanupAndFinish, Math.max(5000, text.length * 180));
+
+        // Short timeout so the doorbell chime finishes ringing before speech begins
+        setTimeout(() => {
+          window.speechSynthesis.speak(utterance);
+          window.speechSynthesis.resume();
+        }, 300);
+
+      } catch (e) {
+        console.warn('SpeechSynthesis speak failed:', e);
+        setTimeout(() => {
+          dismissTtsToast(wasPlaying, originalMuted);
+        }, 3500);
+      }
     } else {
-      setTimeout(dismissTtsToast, 3500);
+      setTimeout(() => {
+        dismissTtsToast(wasPlaying, originalMuted);
+      }, 3500);
     }
   }
 
-  function dismissTtsToast() {
+  function dismissTtsToast(resumeVideo = false, restoreMuted = false) {
     ttsToast.classList.add('hidden');
+    video.muted = restoreMuted;
     video.volume = savedVolume;
+    if (resumeVideo) {
+      video.play().catch(e => console.log('Resume blocked:', e));
+    }
   }
+
+  // Tapping the toast or repeat button allows user to replay the voice on iPad with direct user interaction
+  const btnTtsReplay = document.getElementById('btn-tts-replay');
+  if (btnTtsReplay) {
+    btnTtsReplay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (lastTtsData) speakPrompt(lastTtsData);
+    });
+  }
+  ttsToast.addEventListener('click', () => {
+    if (lastTtsData) speakPrompt(lastTtsData);
+  });
 
 })();
