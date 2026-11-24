@@ -10,6 +10,7 @@ const cors = require('cors');
 const QRCode = require('qrcode');
 const selfsigned = require('selfsigned');
 const crypto = require('crypto');
+const { exec, spawn } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -385,6 +386,116 @@ app.delete('/api/videos/:filename', (req, res) => {
     }
   } else {
     return res.status(404).json({ error: 'Video not found' });
+  }
+});
+
+// Helper: Run Git commands safely
+function runGit(cmd) {
+  return new Promise((resolve) => {
+    exec(cmd, { cwd: __dirname, timeout: 35000 }, (error, stdout, stderr) => {
+      if (error) {
+        return resolve({ success: false, error: (stderr || error.message).trim(), stdout: (stdout || '').trim() });
+      }
+      resolve({ success: true, stdout: (stdout || '').trim(), stderr: (stderr || '').trim() });
+    });
+  });
+}
+
+// API: Get current version
+app.get('/api/system/version', async (req, res) => {
+  try {
+    const headRes = await runGit('git rev-parse --short HEAD');
+    const logRes = await runGit('git log -1 --pretty=format:"%s (%cr)" HEAD');
+    res.json({
+      success: true,
+      commit: headRes.success ? headRes.stdout : 'unknown',
+      commitInfo: logRes.success ? logRes.stdout : '',
+      platform: os.platform(),
+      hostname: os.hostname()
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// API: Check GitHub for updates
+app.get('/api/system/check-update', async (req, res) => {
+  try {
+    const headRes = await runGit('git rev-parse --short HEAD');
+    const currentCommit = headRes.success ? headRes.stdout : '';
+
+    // Fetch latest remote refs
+    await runGit('git fetch origin main');
+    const remoteRes = await runGit('git rev-parse --short origin/main');
+    const remoteCommit = remoteRes.success ? remoteRes.stdout : currentCommit;
+
+    const remoteLogRes = await runGit('git log -1 --pretty=format:"%h - %s (%cr)" origin/main');
+    const currentLogRes = await runGit('git log -1 --pretty=format:"%h - %s (%cr)" HEAD');
+
+    // List any commits between local and remote
+    const diffRes = await runGit('git log HEAD..origin/main --oneline -n 10');
+    const pendingCommits = (diffRes.success && diffRes.stdout) 
+      ? diffRes.stdout.split('\n').filter(Boolean) 
+      : [];
+
+    const updateAvailable = currentCommit && remoteCommit && currentCommit !== remoteCommit;
+
+    res.json({
+      success: true,
+      currentCommit,
+      currentCommitInfo: currentLogRes.success ? currentLogRes.stdout : '',
+      remoteCommit,
+      remoteCommitInfo: remoteLogRes.success ? remoteLogRes.stdout : '',
+      updateAvailable,
+      pendingCommits
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// API: Upgrade now (git pull & auto-restart)
+app.post('/api/system/upgrade', async (req, res) => {
+  try {
+    console.log('[System] Upgrade initiated via dashboard...');
+    const pullRes = await runGit('git pull origin main');
+    
+    if (!pullRes.success) {
+      return res.status(500).json({
+        success: false,
+        error: pullRes.error || 'Git pull failed',
+        stdout: pullRes.stdout
+      });
+    }
+
+    const newHeadRes = await runGit('git rev-parse --short HEAD');
+    const newCommit = newHeadRes.success ? newHeadRes.stdout : '';
+
+    // Schedule graceful server restart after response is sent
+    setTimeout(() => {
+      console.log('[System] Restarting server process with upgraded code...');
+      try {
+        const child = spawn(process.argv[0], process.argv.slice(1), {
+          detached: true,
+          stdio: 'inherit',
+          cwd: __dirname
+        });
+        child.unref();
+        process.exit(0);
+      } catch (err) {
+        console.error('[System] Error during auto-restart:', err);
+      }
+    }, 1500);
+
+    res.json({
+      success: true,
+      message: 'Successfully upgraded from GitHub! Server is restarting...',
+      output: pullRes.stdout,
+      newCommit: newCommit,
+      restarting: true
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 

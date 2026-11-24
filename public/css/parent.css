@@ -1095,3 +1095,287 @@ body {
   margin-top: 6px;
   text-align: right;
 }
+
+/* ========================================================
+   SYSTEM UPGRADER & GITHUB SYNC
+   ======================================================== */
+.btn-upgrade {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  color: #c7d2fe;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.btn-upgrade:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: #818cf8;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-upgrade.update-available {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.25));
+  border-color: #10b981;
+  color: #6ee7b7;
+  animation: pulse 2s infinite;
+}
+
+.upgrade-badge {
+  background: #10b981;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Upgrade Modal Backdrop & Card */
+.upgrade-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.upgrade-modal-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 540px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.upgrade-modal-header {
+  padding: 18px 24px;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.upgrade-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upgrade-modal-title h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #fff;
+}
+
+.upgrade-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.btn-close-modal:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.upgrade-modal-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.upgrade-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.upgrade-info-cell {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upgrade-cell-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.upgrade-cell-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+  font-family: monospace;
+}
+
+.upgrade-status-box {
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e7ff;
+}
+
+.upgrade-status-box.success {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.upgrade-status-box.has-update {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fde68a;
+}
+
+.pending-commits-box {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 12px 16px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.pending-commits-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.pending-commits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pending-commits-list li {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upgrade-terminal-log {
+  background: #090d16;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 12px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  color: #a7f3d0;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+.upgrade-modal-footer {
+  padding: 16px 24px;
+  background: #0f172a;
+  border-top: 1px solid #334155;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn-modal-action {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-refresh-update {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.btn-refresh-update:hover {
+  background: #475569;
+}
+
+.btn-do-upgrade {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+}
+
+.btn-do-upgrade:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+}
+
+.btn-do-upgrade:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}

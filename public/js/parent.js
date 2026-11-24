@@ -884,4 +884,193 @@
     xhr.send(formData);
   }
 
+  // =================== System Updater & GitHub Sync ===================
+  const btnUpgrade = document.getElementById('btn-upgrade');
+  const upgradeIcon = document.getElementById('upgrade-icon');
+  const upgradeText = document.getElementById('upgrade-text');
+  const upgradeBadge = document.getElementById('upgrade-badge');
+
+  const upgradeModal = document.getElementById('upgrade-modal');
+  const btnCloseUpgradeModal = document.getElementById('btn-close-upgrade-modal');
+  const installedVersionVal = document.getElementById('installed-version-val');
+  const latestVersionVal = document.getElementById('latest-version-val');
+  const upgradeStatusBox = document.getElementById('upgrade-status-box');
+  const upgradeStatusIcon = document.getElementById('upgrade-status-icon');
+  const upgradeStatusMsg = document.getElementById('upgrade-status-msg');
+  const pendingCommitsBox = document.getElementById('pending-commits-box');
+  const pendingCommitsList = document.getElementById('pending-commits-list');
+  const upgradeTerminalLog = document.getElementById('upgrade-terminal-log');
+  const btnRefreshUpdate = document.getElementById('btn-refresh-update');
+  const btnDoUpgrade = document.getElementById('btn-do-upgrade');
+
+  let isCheckingUpdate = false;
+  let isUpgrading = false;
+
+  async function checkSystemUpdates(showModalOnComplete = false) {
+    if (isCheckingUpdate) return;
+    isCheckingUpdate = true;
+    if (upgradeIcon) upgradeIcon.style.animation = 'spin 1s linear infinite';
+    if (upgradeStatusMsg) upgradeStatusMsg.innerText = 'Connecting to GitHub...';
+
+    try {
+      const res = await fetch('/api/system/check-update');
+      const data = await res.json();
+
+      if (data.success) {
+        if (installedVersionVal) installedVersionVal.innerText = data.currentCommit || 'unknown';
+        if (latestVersionVal) latestVersionVal.innerText = data.remoteCommit || 'unknown';
+
+        if (data.updateAvailable) {
+          // Update available!
+          if (btnUpgrade) btnUpgrade.classList.add('update-available');
+          if (upgradeBadge) upgradeBadge.classList.remove('hidden');
+          if (upgradeText) upgradeText.innerText = 'Upgrade Available!';
+
+          if (upgradeStatusBox) {
+            upgradeStatusBox.className = 'upgrade-status-box has-update';
+          }
+          if (upgradeStatusIcon) upgradeStatusIcon.innerText = '⚡';
+          if (upgradeStatusMsg) {
+            upgradeStatusMsg.innerText = `New version (${data.remoteCommit}) available on GitHub!`;
+          }
+
+          if (btnDoUpgrade) {
+            btnDoUpgrade.disabled = false;
+            btnDoUpgrade.innerHTML = '<span>⚡</span> Upgrade Now (Pull & Sync)';
+          }
+
+          // Show pending commits
+          if (data.pendingCommits && data.pendingCommits.length > 0) {
+            pendingCommitsList.innerHTML = '';
+            data.pendingCommits.forEach(msg => {
+              const li = document.createElement('li');
+              li.innerText = '• ' + msg;
+              pendingCommitsList.appendChild(li);
+            });
+            pendingCommitsBox.classList.remove('hidden');
+          } else {
+            pendingCommitsBox.classList.add('hidden');
+          }
+
+          if (showModalOnComplete && upgradeModal) {
+            upgradeModal.classList.remove('hidden');
+          }
+        } else {
+          // Up to date!
+          if (btnUpgrade) btnUpgrade.classList.remove('update-available');
+          if (upgradeBadge) upgradeBadge.classList.add('hidden');
+          if (upgradeText) upgradeText.innerText = 'Up to Date (v' + (data.currentCommit || '') + ')';
+
+          if (upgradeStatusBox) {
+            upgradeStatusBox.className = 'upgrade-status-box success';
+          }
+          if (upgradeStatusIcon) upgradeStatusIcon.innerText = '✅';
+          if (upgradeStatusMsg) {
+            upgradeStatusMsg.innerText = `You are on the latest version (${data.currentCommit})!`;
+          }
+
+          if (btnDoUpgrade) {
+            btnDoUpgrade.disabled = true;
+            btnDoUpgrade.innerHTML = '<span>✅</span> Already Up to Date';
+          }
+
+          if (pendingCommitsBox) pendingCommitsBox.classList.add('hidden');
+        }
+      } else {
+        if (upgradeStatusMsg) upgradeStatusMsg.innerText = `Check failed: ${data.error || 'Unknown error'}`;
+      }
+    } catch (err) {
+      if (upgradeStatusMsg) upgradeStatusMsg.innerText = `Network error checking updates: ${err.message}`;
+    } finally {
+      isCheckingUpdate = false;
+      if (upgradeIcon) upgradeIcon.style.animation = '';
+    }
+  }
+
+  async function performUpgrade() {
+    if (isUpgrading) return;
+    isUpgrading = true;
+
+    btnDoUpgrade.disabled = true;
+    btnDoUpgrade.innerHTML = '<span>⏳</span> Pulling from GitHub...';
+    btnRefreshUpdate.disabled = true;
+
+    upgradeTerminalLog.classList.remove('hidden');
+    upgradeTerminalLog.innerText = '$ git pull origin main\nContacting remote GitHub repository...\n';
+
+    if (upgradeStatusBox) upgradeStatusBox.className = 'upgrade-status-box';
+    if (upgradeStatusIcon) upgradeStatusIcon.innerText = '⏳';
+    if (upgradeStatusMsg) upgradeStatusMsg.innerText = 'Syncing repository and restarting server...';
+
+    try {
+      const res = await fetch('/api/system/upgrade', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        upgradeTerminalLog.innerText += `${data.output || 'Already up to date.'}\n\n`;
+        upgradeTerminalLog.innerText += `✔ Successfully synced commit ${data.newCommit || ''}\n`;
+        upgradeTerminalLog.innerText += `✔ Server process is restarting...\n`;
+
+        if (upgradeStatusBox) upgradeStatusBox.className = 'upgrade-status-box success';
+        if (upgradeStatusIcon) upgradeStatusIcon.innerText = '🎉';
+        
+        let countdown = 5;
+        const countInterval = setInterval(() => {
+          if (upgradeStatusMsg) {
+            upgradeStatusMsg.innerText = `Upgrade Complete! Reloading dashboard in ${countdown}s...`;
+          }
+          countdown--;
+          if (countdown <= 0) {
+            clearInterval(countInterval);
+            window.location.reload();
+          }
+        }, 1000);
+      } else {
+        upgradeTerminalLog.innerText += `\n❌ Error: ${data.error || 'Failed to upgrade'}\n`;
+        if (data.stdout) upgradeTerminalLog.innerText += `${data.stdout}\n`;
+        if (upgradeStatusMsg) upgradeStatusMsg.innerText = 'Upgrade failed. Check terminal output above.';
+        btnDoUpgrade.disabled = false;
+        btnDoUpgrade.innerHTML = '<span>🔄</span> Try Again';
+        btnRefreshUpdate.disabled = false;
+        isUpgrading = false;
+      }
+    } catch (err) {
+      upgradeTerminalLog.innerText += `\n❌ Connection error: ${err.message}\n`;
+      if (upgradeStatusMsg) upgradeStatusMsg.innerText = 'Connection lost. Server may be restarting...';
+      setTimeout(() => window.location.reload(), 4000);
+    }
+  }
+
+  if (btnUpgrade) {
+    btnUpgrade.addEventListener('click', () => {
+      upgradeModal.classList.remove('hidden');
+      checkSystemUpdates(false);
+    });
+  }
+
+  if (btnCloseUpgradeModal) {
+    btnCloseUpgradeModal.addEventListener('click', () => {
+      upgradeModal.classList.add('hidden');
+    });
+  }
+
+  if (upgradeModal) {
+    upgradeModal.addEventListener('click', (e) => {
+      if (e.target === upgradeModal && !isUpgrading) {
+        upgradeModal.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnRefreshUpdate) {
+    btnRefreshUpdate.addEventListener('click', () => checkSystemUpdates(false));
+  }
+
+  if (btnDoUpgrade) {
+    btnDoUpgrade.addEventListener('click', performUpgrade);
+  }
+
+  // Check for updates shortly after dashboard load
+  setTimeout(() => checkSystemUpdates(false), 2500);
+
 })();

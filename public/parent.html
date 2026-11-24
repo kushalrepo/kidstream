@@ -18,10 +18,18 @@
     </div>
 
     <div class="nav-actions">
+      <!-- Kid Status Badge -->
       <div class="kid-status-badge">
         <span class="kid-status-dot" id="kid-status-dot"></span>
         <span id="kid-status-text">Kid Waiting...</span>
       </div>
+
+      <!-- Upgrade / Version Button -->
+      <button class="btn-upgrade" id="btn-upgrade" title="Check for updates on GitHub">
+        <span class="upgrade-icon" id="upgrade-icon">🔄</span>
+        <span class="upgrade-text" id="upgrade-text">Check Updates</span>
+        <span class="upgrade-badge hidden" id="upgrade-badge">NEW</span>
+      </button>
 
       <a href="/kid" target="_blank" class="btn-open-kid">
         <span>📺</span> Open Kid Player
@@ -404,8 +412,60 @@
 
   </main>
 
+  <!-- System Upgrade Modal -->
+  <div class="upgrade-modal-backdrop hidden" id="upgrade-modal">
+    <div class="upgrade-modal-card">
+      <div class="upgrade-modal-header">
+        <div class="upgrade-modal-title">
+          <span style="font-size: 28px;">🚀</span>
+          <div>
+            <h3>KidStream System Updater</h3>
+            <span class="upgrade-subtitle">Fetch latest updates from GitHub in 1 click</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-upgrade-modal" title="Close">✕</button>
+      </div>
+
+      <div class="upgrade-modal-body">
+        <div class="upgrade-info-grid">
+          <div class="upgrade-info-cell">
+            <span class="upgrade-cell-label">Installed Version</span>
+            <span class="upgrade-cell-val" id="installed-version-val">...</span>
+          </div>
+          <div class="upgrade-info-cell">
+            <span class="upgrade-cell-label">GitHub Latest</span>
+            <span class="upgrade-cell-val" id="latest-version-val">...</span>
+          </div>
+        </div>
+
+        <div class="upgrade-status-box" id="upgrade-status-box">
+          <span id="upgrade-status-icon">🔍</span>
+          <span id="upgrade-status-msg">Checking GitHub for latest version...</span>
+        </div>
+
+        <!-- Pending Commits List if update available -->
+        <div class="pending-commits-box hidden" id="pending-commits-box">
+          <div class="pending-commits-title">What's New in This Update:</div>
+          <ul class="pending-commits-list" id="pending-commits-list"></ul>
+        </div>
+
+        <!-- Terminal log output during upgrade -->
+        <pre class="upgrade-terminal-log hidden" id="upgrade-terminal-log"></pre>
+      </div>
+
+      <div class="upgrade-modal-footer">
+        <button class="btn-modal-action btn-refresh-update" id="btn-refresh-update">
+          <span>🔄</span> Re-check
+        </button>
+        <button class="btn-modal-action btn-do-upgrade" id="btn-do-upgrade" disabled>
+          <span>⚡</span> Upgrade Now (Pull & Sync)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts with cache busters -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/parent.js?v=2.7"></script>
+  <script src="/js/parent.js?v=2.8"></script>
 </body>
 </html>
